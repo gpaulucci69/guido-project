@@ -1,0 +1,9 @@
+groups:
+  - name: saas-contable
+    rules:
+      - alert: MailDispatchFailures
+        expr: increase(mail_dispatch_failures_total[10m]) > 0
+      - alert: QueueLag
+        expr: nats_consumer_lag > 100
+      - alert: ApiLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2

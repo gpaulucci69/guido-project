@@ -1,0 +1,6 @@
+{
+  "durable_name": "billing-workflow",
+  "ack_policy": "explicit",
+  "filter_subject": "billing.>",
+  "max_ack_pending": 1000
+}

@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-workflow-service
+  namespace: saas-contable
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: billing-workflow-service }
+  template:
+    metadata: { labels: { app: billing-workflow-service } }
+    spec:
+      containers:
+        - name: billing-workflow-service
+          image: saas-contable/billing-workflow-service:latest
+          ports: [{ containerPort: 3000 }]
+          readinessProbe: { httpGet: { path: /readyz, port: 3000 } }
+          livenessProbe: { httpGet: { path: /livez, port: 3000 } }
