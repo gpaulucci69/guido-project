@@ -197,9 +197,52 @@ services:
       VITE_KEYCLOAK_URL: "http://localhost:8080"
       VITE_KEYCLOAK_REALM: "saas-contable"
       VITE_KEYCLOAK_CLIENT_ID: "guido"
+      VITE_PROFILE_API_URL: "http://localhost:3001/api/v1"
     volumes:
       - .:/workspace
       - frontend-node-modules:/workspace/node_modules
+    networks:
+      - saas-network
+
+  profile-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: profile_service
+    working_dir: /workspace
+    command:
+      [
+        "sh",
+        "-c",
+        "npm ci && npx prisma generate --schema packages/database/prisma/schema.prisma && node_modules/.bin/vite-node apps/profile-service/src/main.ts",
+      ]
+    environment:
+      PROFILE_PORT: "3001"
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/saas_contable?schema=public"
+      KEYCLOAK_URL: "http://keycloak_saas:8080"
+      OIDC_REALM: "saas-contable"
+      OIDC_ISSUER: "http://localhost:8080/realms/saas-contable"
+      OIDC_AUDIENCE: "account"
+      OIDC_JWKS_URI: "http://keycloak_saas:8080/realms/saas-contable/protocol/openid-connect/certs"
+      KEYCLOAK_ADMIN_USERNAME: "admin"
+      KEYCLOAK_ADMIN_PASSWORD: "admin"
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadminsecret"
+      MINIO_BUCKET: "saas-profile-avatars"
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/workspace
+      - profile-node-modules:/workspace/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_started
     networks:
       - saas-network
 
@@ -209,6 +252,7 @@ volumes:
   minio-data:
   frontend-node-modules:
   keycloak_data:
+  profile-node-modules:
 
 networks:
   saas-network:

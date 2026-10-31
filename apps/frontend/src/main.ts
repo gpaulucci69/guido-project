@@ -3,6 +3,9 @@ import { accessToken, completeLogin, sessionIdentity } from "./auth/session";
 import { demoLabel, renderLogin } from "./auth/auth-view";
 import { createApiClient } from "./lib/api/client";
 import { canAction } from "./auth/permission-evaluator";
+import { renderAppHeader } from "./components/app-header";
+import { openPasswordModal } from "./components/password-modal";
+import { openProfileModal } from "./components/profile-modal";
 type Obligation = {
   id: string;
   serviceDescription: string;
@@ -29,7 +32,12 @@ async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
   } catch {
     /* API is shown as unavailable below. */
   }
-  root.innerHTML = `<main class="shell"><header class="header"><div><span class="eyebrow">SAAS CONTABLE</span><h1>Panel de cobranzas</h1><p class="muted">Gestioná obligaciones y rendiciones de pago.</p></div><span class="status"><i></i> ${demoLabel(identity.isDemo)}</span></header><section class="toolbar"><h2>Obligaciones</h2>${canAction(identity.permissions, "add/customer") ? '<button id="new">+ Nueva obligación</button>' : ""}</section><section class="panel"><table><thead><tr><th>Servicio</th><th>Vencimiento</th><th>Estado</th><th>Saldo</th><th></th></tr></thead><tbody id="rows">${obligations.length ? obligations.map((item) => row(item, identity.permissions)).join("") : '<tr><td colspan="5" class="empty">No hay obligaciones. Creá la primera para comenzar.</td></tr>'}</tbody></table></section><section id="form" class="panel hidden"><h2>Nueva obligación</h2><form id="create"><label>Descripción<input name="serviceDescription" required value="Honorarios mensuales" /></label><label>Período desde<input name="periodStartDate" type="date" required /></label><label>Período hasta<input name="periodEndDate" type="date" required /></label><label>Vencimiento<input name="dueDate" type="date" required /></label><label>Importe ARS<input name="totalAmount" inputmode="decimal" required placeholder="80000.00" /></label><div><button type="submit">Crear obligación</button><button type="button" class="secondary" id="close">Cancelar</button></div><p id="message" class="result"></p></form></section></main>`;
+  root.innerHTML = `<main class="shell"><header id="account-header" class="header"><div><span class="eyebrow">SAAS CONTABLE</span><h1>Panel de cobranzas</h1><p class="muted">Gestioná obligaciones y rendiciones de pago.</p></div><span class="status"><i></i> ${demoLabel(identity.isDemo)}</span></header><section class="toolbar"><h2>Obligaciones</h2>${canAction(identity.permissions, "add/customer") ? '<button id="new">+ Nueva obligación</button>' : ""}</section><section class="panel"><table><thead><tr><th>Servicio</th><th>Vencimiento</th><th>Estado</th><th>Saldo</th><th></th></tr></thead><tbody id="rows">${obligations.length ? obligations.map((item) => row(item, identity.permissions)).join("") : '<tr><td colspan="5" class="empty">No hay obligaciones. Creá la primera para comenzar.</td></tr>'}</tbody></table></section><section id="form" class="panel hidden"><h2>Nueva obligación</h2><form id="create"><label>Descripción<input name="serviceDescription" required value="Honorarios mensuales" /></label><label>Período desde<input name="periodStartDate" type="date" required /></label><label>Período hasta<input name="periodEndDate" type="date" required /></label><label>Vencimiento<input name="dueDate" type="date" required /></label><label>Importe ARS<input name="totalAmount" inputmode="decimal" required placeholder="80000.00" /></label><div><button type="submit">Crear obligación</button><button type="button" class="secondary" id="close">Cancelar</button></div><p id="message" class="result"></p></form></section></main>`;
+  await renderAppHeader({
+    onEditProfile: (profile) =>
+      openProfileModal(profile, () => render(identity)),
+    onResetPassword: openPasswordModal,
+  });
   document
     .querySelector("#new")
     ?.addEventListener("click", () =>

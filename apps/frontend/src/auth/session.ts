@@ -17,6 +17,10 @@ export type FrontendPermission = {
 export type FrontendIdentity = {
   sub: string;
   tenantId: string;
+  firstName: string;
+  lastName: string;
+  alias: string;
+  avatar: string | null;
   permissions: readonly FrontendPermission[];
   roles: readonly string[];
   isDemo: boolean;
@@ -79,6 +83,14 @@ export function identityFromUser(user: User): FrontendIdentity {
   return {
     sub: profile.sub,
     tenantId,
+    firstName: typeof profile.given_name === "string" ? profile.given_name : "",
+    lastName:
+      typeof profile.family_name === "string" ? profile.family_name : "",
+    alias: typeof profile.alias === "string" ? profile.alias.trim() : "",
+    avatar:
+      typeof profile.avatar === "string" && profile.avatar.trim()
+        ? profile.avatar
+        : null,
     permissions: normalizeAuthorization(authorization),
     roles: Array.isArray(
       (profile.resource_access as { guido?: { roles?: unknown } })?.guido
