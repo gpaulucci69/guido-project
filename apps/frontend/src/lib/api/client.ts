@@ -19,6 +19,7 @@ export function createApiClient(options: ApiClientOptions) {
     const token = await options.getToken?.();
     const headers = new Headers(init.headers);
     headers.set("accept", "application/json");
+    headers.set("content-type", "application/json");
     if (token) headers.set("authorization", `Bearer ${token}`);
     const response = await fetch(`${options.baseUrl}${path}`, {
       ...init,

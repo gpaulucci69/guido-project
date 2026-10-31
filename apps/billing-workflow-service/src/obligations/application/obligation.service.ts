@@ -61,13 +61,22 @@ export class ObligationService {
     return cancelled;
   }
 
-  async applyValidatedPayment(tenantId: string, id: string, amount: string): Promise<Obligation> {
+  async applyValidatedPayment(
+    tenantId: string,
+    id: string,
+    amount: string,
+  ): Promise<Obligation> {
     const current = await this.get(tenantId, id);
     const nextBalance = current.balanceDue.subtract(ArsMoney.parse(amount));
     const updated = await this.repository.update({
       ...current,
-      balanceDue: nextBalance.isNegative() ? ArsMoney.fromCents(0n) : nextBalance,
-      status: nextBalance.isNegative() || nextBalance.isZero() ? "PAID" : "PARTIALLY_PAID",
+      balanceDue: nextBalance.isNegative()
+        ? ArsMoney.fromCents(0n)
+        : nextBalance,
+      status:
+        nextBalance.isNegative() || nextBalance.isZero()
+          ? "PAID"
+          : "PARTIALLY_PAID",
     });
     return updated;
   }

@@ -6,7 +6,7 @@ export type TokenSet = {
 export type TokenRefresher = (refreshToken: string) => Promise<TokenSet>;
 
 export class TokenManager {
-  private current?: TokenSet;
+  private current: TokenSet | undefined;
   constructor(private readonly refresh: TokenRefresher) {}
 
   set(tokens: TokenSet): void {
@@ -17,7 +17,12 @@ export class TokenManager {
     if (!this.current) return undefined;
     if (this.current.expiresAt > now + 30_000 || !this.current.refreshToken)
       return this.current.accessToken;
-    this.current = await this.refresh(this.current.refreshToken);
+    try {
+      this.current = await this.refresh(this.current.refreshToken);
+    } catch (error) {
+      this.current = undefined;
+      throw error;
+    }
     return this.current.accessToken;
   }
 }

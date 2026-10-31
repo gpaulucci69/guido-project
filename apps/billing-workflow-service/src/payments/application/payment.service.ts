@@ -63,6 +63,10 @@ export class PaymentService {
     return this.repository.list(tenantId, obligationId);
   }
 
+  get(tenantId: string, paymentId: string) {
+    return this.repository.find(tenantId, paymentId);
+  }
+
   async resolve(
     tenantId: string,
     paymentId: string,

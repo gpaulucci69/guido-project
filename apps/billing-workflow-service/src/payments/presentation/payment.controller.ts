@@ -8,12 +8,28 @@ export class PaymentController {
 
   async cancel(
     cancelService: CancelPaymentService,
-    input: { tenantId: string; paymentId: string; clientId: string; reason: string; userId: string },
+    input: {
+      tenantId: string;
+      paymentId: string;
+      clientId: string;
+      reason: string;
+      userId: string;
+    },
   ) {
     try {
-      return { status: 200, body: await cancelService.cancel(input.tenantId, input.paymentId, input.clientId, input.reason, input.userId) };
+      return {
+        status: 200,
+        body: await cancelService.cancel(
+          input.tenantId,
+          input.paymentId,
+          input.clientId,
+          input.reason,
+          input.userId,
+        ),
+      };
     } catch (error) {
-      const status = error instanceof Error && error.message.includes("ya fue") ? 409 : 400;
+      const status =
+        error instanceof Error && error.message.includes("ya fue") ? 409 : 400;
       return { status, body: problemFromError(error) };
     }
   }

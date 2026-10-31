@@ -1,0 +1,9 @@
+{
+  "mappers": [
+    {
+      "name": "Role Routes & Actions Mapper",
+      "fileName": "role-routes-actions-mapper.js",
+      "description": "Extrae route y action de los roles y los mapea en el token"
+    }
+  ]
+}

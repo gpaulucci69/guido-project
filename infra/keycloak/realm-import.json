@@ -1,0 +1,13 @@
+{
+  "realm": "saas-contable",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "guido",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:*"]
+    }
+  ]
+}

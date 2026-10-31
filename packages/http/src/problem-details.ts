@@ -50,3 +50,19 @@ export function problemFromError(
     ...(instance ? { instance } : {}),
   };
 }
+
+export function unauthorizedProblem(): ProblemDetails {
+  return problem(
+    401,
+    "Autenticación requerida",
+    "Debe iniciar sesión para continuar.",
+  );
+}
+
+export function forbiddenProblem(): ProblemDetails {
+  return problem(
+    403,
+    "Acceso denegado",
+    "No tiene permisos para realizar esta operación.",
+  );
+}

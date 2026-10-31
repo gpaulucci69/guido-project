@@ -1,0 +1,12 @@
+{
+  "clientId": "guido",
+  "roles": [
+    {
+      "name": "SUPER_ADMIN",
+      "attributes": {
+        "route": ["/home/welcome", "/home/customers"],
+        "action": ["view/customers/all"]
+      }
+    }
+  ]
+}

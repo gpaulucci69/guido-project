@@ -14,4 +14,19 @@ describe("TokenManager", () => {
     });
     await expect(manager.accessToken(980_000)).resolves.toBe("refresh-new");
   });
+
+  it("clears the local session when renewal fails", async () => {
+    const manager = new TokenManager(async () => {
+      throw new Error("renovación fallida");
+    });
+    manager.set({
+      accessToken: "expired",
+      expiresAt: 0,
+      refreshToken: "refresh",
+    });
+    await expect(manager.accessToken(1_000)).rejects.toThrow(
+      "renovación fallida",
+    );
+    await expect(manager.accessToken(1_000)).resolves.toBeUndefined();
+  });
 });

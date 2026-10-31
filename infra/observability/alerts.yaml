@@ -7,3 +7,27 @@ groups:
         expr: nats_consumer_lag > 100
       - alert: ApiLatency
         expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+groups:
+  - name: authentication-authorization
+    rules:
+      - alert: AuthenticationDenialsDetected
+        expr: security_authentication_denied_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Se detectaron denegaciones de autenticación"
+      - alert: CrossTenantAccessAttempt
+        expr: security_cross_tenant_denied_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Se detectó un intento cross-tenant"
+      - alert: OidcRenewalFailures
+        expr: security_oidc_renewal_failed_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fallos de renovación OIDC"

@@ -12,6 +12,7 @@
     "format": "prettier --check .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:business": "vitest run --coverage",
     "build": "tsc --noEmit"
   },
   "engines": {
@@ -22,7 +23,12 @@
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
+    "prisma": "^6.19.3",
     "typescript": "^5.0.0",
     "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "oidc-client-ts": "^3.5.0"
   }
 }

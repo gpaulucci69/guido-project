@@ -1,3 +1,6 @@
+import type { IdentityContext } from "../auth/identity-context";
+import { canAction } from "../auth/permission-evaluator";
+
 export type PortfolioClient = {
   id: string;
   tenantId: string;
@@ -5,25 +8,20 @@ export type PortfolioClient = {
 };
 
 export class PortfolioAuthorizationService {
-  canAccessClient(
-    userId: string,
-    roles: readonly string[],
-    client: PortfolioClient,
-  ): boolean {
-    if (roles.includes("SUPER_ADMIN") || roles.includes("STUDIO_ADMIN"))
-      return true;
+  canAccessClient(identity: IdentityContext, client: PortfolioClient): boolean {
+    if (client.tenantId !== identity.tenantId) return false;
+    if (canAction(identity.permissions, "view/customers/all")) return true;
     return (
-      roles.includes("ACCOUNTANT") &&
-      client.representativeAccountantId === userId
+      canAction(identity.permissions, "view/customers/own") &&
+      client.representativeAccountantId === identity.sub
     );
   }
 
   assertCanAccessClient(
-    userId: string,
-    roles: readonly string[],
+    identity: IdentityContext,
     client: PortfolioClient,
   ): void {
-    if (!this.canAccessClient(userId, roles, client))
+    if (!this.canAccessClient(identity, client))
       throw new Error("El cliente no pertenece a su cartera");
   }
 }

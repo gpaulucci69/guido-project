@@ -1,45 +1,178 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: saas_contable_db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: saas_contable
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports: ["5432:5432"]
+    ports:
+      - "5435:5432"
     healthcheck:
-      {
-        test: ["CMD-SHELL", "pg_isready -U postgres"],
-        interval: 5s,
-        timeout: 5s,
-        retries: 10,
-      }
-    volumes: ["postgres-data:/var/lib/postgresql/data"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d saas_contable"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - saas-network
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak_db
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak_user -d keycloak_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - saas-network
+
   nats:
     image: nats:2.10-alpine
+    container_name: saas_nats
+    restart: unless-stopped
     command: ["-js", "-sd", "/data", "-m", "8222"]
-    ports: ["4222:4222", "8222:8222"]
-    volumes: ["nats-data:/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    networks:
+      - saas-network
+
   minio:
     image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    container_name: saas_minio
+    restart: unless-stopped
     user: "0:0"
     command: server /data --console-address ":9001"
-    environment: { MINIO_ROOT_USER: minioadmin, MINIO_ROOT_PASSWORD: minioadminsecret }
-    ports: ["9000:9000", "9001:9001"]
-    volumes: ["minio-data:/data"]
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    command: start-dev
     environment:
-      { KC_BOOTSTRAP_ADMIN_USERNAME: admin, KC_BOOTSTRAP_ADMIN_PASSWORD: admin }
-    ports: ["8080:8080"]
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminsecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - saas-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: keycloak_saas
+    restart: unless-stopped
+    command: start-dev --import-realm --features=scripts
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak_db
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: "xforwarded"
+      KC_HEALTH_ENABLED: "true"
+      KC_FEATURES: "scripts"
+    volumes:
+      # Montaje del provider JAR compilado
+      - ./providers/role-routes-actions-mapper.jar:/opt/keycloak/providers/role-routes-actions-mapper.jar:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - saas-network
+
+  keycloak-setup:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: keycloak_initial_setup
+    depends_on:
+      - keycloak
+    networks:
+      - saas-network
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "==> Esperando disponibilidad del endpoint HTTP de Keycloak..."
+        until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak_saas:8080 --realm master --user admin --password admin 2>/dev/null; do
+          echo "Keycloak aún inicializando. Reintentando en 3s..."
+          sleep 3
+        done
+
+        echo "==> 1. Desactivando SSL estricto en realm master... (QUITAR EN PRODUCCIÓN)"
+        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+
+        echo "==> 2. Verificando/Creando realm saas-contable..."
+        if ! /opt/keycloak/bin/kcadm.sh get realms/saas-contable >/dev/null 2>&1; then
+          /opt/keycloak/bin/kcadm.sh create realms -s realm=saas-contable -s enabled=true -s displayName="SaaS Contable" -s sslRequired=NONE
+          echo "Realm saas-contable creado exitosamente."
+        else
+          echo "Realm saas-contable ya existe. Asegurando sslRequired=NONE..."
+          /opt/keycloak/bin/kcadm.sh update realms/saas-contable -s sslRequired=NONE
+        fi
+
+        echo "==> 3. Verificando/Creando client guido dentro de saas-contable..."
+        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes 2>/dev/null)
+
+        if [ -z "$$CLIENT_ID" ]; then
+          /opt/keycloak/bin/kcadm.sh create clients -r saas-contable \
+            -s clientId=guido \
+            -s name="Guido Estudio Contable" \
+            -s enabled=true \
+            -s publicClient=true \
+            -s standardFlowEnabled=true \
+            -s directAccessGrantsEnabled=true \
+            -s 'redirectUris=["http://localhost:*", "http://138.68.11.125:*", "*"]' \
+            -s 'webOrigins=["+"]'
+          echo "Client guido creado con éxito (Public Client OIDC + PKCE)."
+        else
+          echo "Client guido ya existe en el realm saas-contable."
+        fi
+
+        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes)
+        /opt/keycloak/bin/kcadm.sh update clients/$$CLIENT_ID -r saas-contable \
+          -s 'redirectUris=["http://localhost:5173/*", "http://138.68.11.125:5173/*"]' \
+          -s 'webOrigins=["http://localhost:5173", "http://138.68.11.125:5173"]'
+
+        echo "==> Inicialización y setup de Keycloak completados con éxito."
+    restart: "no"
+
   billing-workflow:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["node_modules/.bin/vite-node", "apps/billing-workflow-service/src/main.ts"]
+    container_name: billing_workflow_service
+    command:
+      [
+        "node_modules/.bin/vite-node",
+        "apps/billing-workflow-service/src/main.ts",
+      ]
     environment:
       PORT: "3000"
-    ports: ["3000:3000"]
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/saas_contable?schema=public"
+      NATS_URL: "nats://nats:4222"
+      S3_ENDPOINT: "http://minio:9000"
+      KEYCLOAK_URL: "http://keycloak_saas:8080"
+      OIDC_ISSUER: "http://localhost:8080/realms/saas-contable"
+      OIDC_AUDIENCE: "account"
+      OIDC_JWKS_URI: "http://keycloak_saas:8080/realms/saas-contable/protocol/openid-connect/certs"
+    ports:
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,12 +180,36 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      keycloak:
+        condition: service_started
+    networks:
+      - saas-network
+
   frontend:
     image: node:20-alpine
+    container_name: saas_frontend
     working_dir: /workspace
     command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0"]
-    ports: ["5173:5173"]
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "http://localhost:3000"
+      VITE_KEYCLOAK_URL: "http://localhost:8080"
+      VITE_KEYCLOAK_REALM: "saas-contable"
+      VITE_KEYCLOAK_CLIENT_ID: "guido"
     volumes:
       - .:/workspace
       - frontend-node-modules:/workspace/node_modules
-volumes: { postgres-data: {}, nats-data: {}, minio-data: {}, frontend-node-modules: {} }
+    networks:
+      - saas-network
+
+volumes:
+  postgres-data:
+  nats-data:
+  minio-data:
+  frontend-node-modules:
+  keycloak_data:
+
+networks:
+  saas-network:
+    driver: bridge
