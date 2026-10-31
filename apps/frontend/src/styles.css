@@ -20,6 +20,107 @@ body {
   align-items: center;
   margin-bottom: 36px;
 }
+.account-tools {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account-alias {
+  font-weight: 700;
+  color: #526071;
+}
+.notification-button,
+.avatar-button {
+  background: transparent;
+  color: #526071;
+  padding: 4px;
+}
+.notification-button {
+  font-size: 1.25rem;
+}
+.avatar-button {
+  border-radius: 50%;
+}
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #5271ff;
+  color: white;
+  font-weight: 800;
+}
+.user-initials {
+  font-size: 14px;
+}
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: 54px;
+  z-index: 5;
+  min-width: 190px;
+  padding: 8px;
+  background: white;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px #17202a22;
+}
+.account-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: #17202a;
+  background: transparent;
+}
+.account-menu button:hover,
+.account-menu button:focus {
+  background: #eef2ff;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: #17202a88;
+}
+.modal {
+  position: relative;
+  width: min(100%, 520px);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 28px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px #17202a55;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  background: transparent;
+  color: #526071;
+  font-size: 22px;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.modal-message {
+  min-height: 1.5em;
+}
+.password-modal iframe {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid #dce2eb;
+  border-radius: 10px;
+}
 .eyebrow {
   color: #5271ff;
   font-size: 12px;
