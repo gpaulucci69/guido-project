@@ -4,8 +4,15 @@ export function canRoute(
   permissions: readonly FrontendPermission[],
   route: string,
 ): boolean {
+  const normalizedRoute = route.trim().startsWith("/")
+    ? route.trim()
+    : `/${route.trim()}`;
   return permissions.some(
-    (permission) => permission.type === "route" && permission.value === route,
+    (permission) =>
+      permission.type === "route" &&
+      (permission.value.startsWith("/")
+        ? permission.value
+        : `/${permission.value}`) === normalizedRoute,
   );
 }
 

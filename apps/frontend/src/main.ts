@@ -1,11 +1,22 @@
 import "./styles.css";
 import { accessToken, completeLogin, sessionIdentity } from "./auth/session";
-import { demoLabel, renderLogin } from "./auth/auth-view";
+import { renderLogin } from "./auth/auth-view";
 import { createApiClient } from "./lib/api/client";
 import { canAction } from "./auth/permission-evaluator";
 import { renderAppHeader } from "./components/app-header";
 import { openPasswordModal } from "./components/password-modal";
 import { openProfileModal } from "./components/profile-modal";
+import { canRoute } from "./auth/permission-evaluator";
+import { loadClientContext, clientContextLabel } from "./auth/client-context";
+import { renderNavigationLayout } from "./components/navigation-layout";
+import { renderWelcome } from "./features/welcome/welcome-view";
+import {
+  ACCOUNT_STATUS_ROUTE,
+  CLIENT_LIST_ROUTE,
+  USER_LIST_ROUTE,
+} from "./components/side-menu";
+import { renderPeopleView } from "./features/people/people-view";
+import { loadProfile } from "./auth/profile";
 type Obligation = {
   id: string;
   serviceDescription: string;
@@ -23,8 +34,87 @@ const money = (value: string) =>
     Number(value),
   );
 const request = createApiClient({ baseUrl: api, getToken: accessToken });
+let resolvedClientContext:
+  Awaited<ReturnType<typeof loadClientContext>> | undefined;
+async function getClientContext() {
+  if (resolvedClientContext === undefined)
+    resolvedClientContext = await loadClientContext();
+  return resolvedClientContext;
+}
 async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
   if (!identity) return;
+  const clientContext = await getClientContext();
+  const clientName = clientContextLabel(clientContext);
+  const clientDescription = clientContext?.description ?? "";
+  const logoUrl = clientContext?.logoUrl ?? "";
+  const navigate = (nextRoute: string) => {
+    window.history.pushState({}, document.title, nextRoute);
+    void render(identity);
+  };
+  const requestedRoute = window.location.pathname || "/home/welcome";
+  const route =
+    requestedRoute === ACCOUNT_STATUS_ROUTE
+      ? ACCOUNT_STATUS_ROUTE
+      : requestedRoute === CLIENT_LIST_ROUTE
+        ? CLIENT_LIST_ROUTE
+        : requestedRoute === USER_LIST_ROUTE
+          ? USER_LIST_ROUTE
+          : "/home/welcome";
+  const protectedRoute =
+    route === ACCOUNT_STATUS_ROUTE ||
+    route === CLIENT_LIST_ROUTE ||
+    route === USER_LIST_ROUTE;
+  if (protectedRoute && !canRoute(identity.permissions, route)) {
+    window.history.replaceState({}, document.title, "/home/welcome");
+    renderNavigationLayout(
+      identity,
+      "/home/welcome",
+      `<p class="result">No tenés permisos para consultar esta pantalla.</p>`,
+      navigate,
+      clientName,
+      clientDescription,
+      logoUrl,
+    );
+    await ensureHeader(identity);
+    return;
+  }
+  if (route === "/home/welcome") {
+    const profile = await loadProfile();
+    renderNavigationLayout(
+      identity,
+      route,
+      renderWelcome(
+        profile?.firstName ?? identity.firstName,
+        profile?.lastName ?? identity.lastName,
+      ),
+      navigate,
+      clientName,
+      clientDescription,
+      logoUrl,
+    );
+    await ensureHeader(identity);
+    return;
+  }
+  if (route === CLIENT_LIST_ROUTE || route === USER_LIST_ROUTE) {
+    renderNavigationLayout(
+      identity,
+      route,
+      "",
+      navigate,
+      clientName,
+      clientDescription,
+      logoUrl,
+    );
+    const page = document.querySelector<HTMLElement>("#page-content");
+    if (!page) return;
+    await renderPeopleView(page, {
+      type: route === CLIENT_LIST_ROUTE ? "client" : "user",
+      permissions: identity.permissions,
+      onChanged: () => render(identity),
+    });
+    await ensureHeader(identity);
+    return;
+  }
   let obligations: Obligation[] = [];
   try {
     obligations = (await request<{ items: Obligation[] }>("/obligations"))
@@ -32,12 +122,16 @@ async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
   } catch {
     /* API is shown as unavailable below. */
   }
-  root.innerHTML = `<main class="shell"><header id="account-header" class="header"><div><span class="eyebrow">SAAS CONTABLE</span><h1>Panel de cobranzas</h1><p class="muted">Gestioná obligaciones y rendiciones de pago.</p></div><span class="status"><i></i> ${demoLabel(identity.isDemo)}</span></header><section class="toolbar"><h2>Obligaciones</h2>${canAction(identity.permissions, "add/customer") ? '<button id="new">+ Nueva obligación</button>' : ""}</section><section class="panel"><table><thead><tr><th>Servicio</th><th>Vencimiento</th><th>Estado</th><th>Saldo</th><th></th></tr></thead><tbody id="rows">${obligations.length ? obligations.map((item) => row(item, identity.permissions)).join("") : '<tr><td colspan="5" class="empty">No hay obligaciones. Creá la primera para comenzar.</td></tr>'}</tbody></table></section><section id="form" class="panel hidden"><h2>Nueva obligación</h2><form id="create"><label>Descripción<input name="serviceDescription" required value="Honorarios mensuales" /></label><label>Período desde<input name="periodStartDate" type="date" required /></label><label>Período hasta<input name="periodEndDate" type="date" required /></label><label>Vencimiento<input name="dueDate" type="date" required /></label><label>Importe ARS<input name="totalAmount" inputmode="decimal" required placeholder="80000.00" /></label><div><button type="submit">Crear obligación</button><button type="button" class="secondary" id="close">Cancelar</button></div><p id="message" class="result"></p></form></section></main>`;
-  await renderAppHeader({
-    onEditProfile: (profile) =>
-      openProfileModal(profile, () => render(identity)),
-    onResetPassword: openPasswordModal,
-  });
+  renderNavigationLayout(
+    identity,
+    route,
+    `<section class="toolbar"><h2>Estado de cuenta</h2>${canAction(identity.permissions, "add/customer") ? '<button id="new">+ Nueva obligación</button>' : ""}</section><section class="panel"><table><thead><tr><th>Servicio</th><th>Vencimiento</th><th>Estado</th><th>Saldo</th><th></th></tr></thead><tbody id="rows">${obligations.length ? obligations.map((item) => row(item, identity.permissions)).join("") : '<tr><td colspan="5" class="empty">No hay obligaciones. Creá la primera para comenzar.</td></tr>'}</tbody></table></section><section id="form" class="panel hidden"><h2>Nueva obligación</h2><form id="create"><label>Descripción<input name="serviceDescription" required value="Honorarios mensuales" /></label><label>Período desde<input name="periodStartDate" type="date" required /></label><label>Período hasta<input name="periodEndDate" type="date" required /></label><label>Vencimiento<input name="dueDate" type="date" required /></label><label>Importe ARS<input name="totalAmount" inputmode="decimal" required placeholder="80000.00" /></label><div><button type="submit">Crear obligación</button><button type="button" class="secondary" id="close">Cancelar</button></div><p id="message" class="result"></p></form></section>`,
+    navigate,
+    clientName,
+    clientDescription,
+    logoUrl,
+  );
+  await ensureHeader(identity);
   document
     .querySelector("#new")
     ?.addEventListener("click", () =>
@@ -83,6 +177,34 @@ async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
         await render(identity);
       }),
     );
+}
+
+async function ensureHeader(
+  identity: Awaited<ReturnType<typeof sessionIdentity>>,
+  force = false,
+) {
+  if (!identity) return;
+  const header = document.querySelector<HTMLElement>("#account-header");
+  if (!force && header?.dataset.ready === "true") return;
+  await renderAppHeader({
+    identityAlias: identity.alias,
+    onEditProfile: (profile) =>
+      openProfileModal(profile, async () => {
+        await render(identity);
+        await refreshHeader(identity);
+      }),
+    onResetPassword: openPasswordModal,
+  });
+  if (header) header.dataset.ready = "true";
+}
+
+async function refreshHeader(
+  identity: Awaited<ReturnType<typeof sessionIdentity>>,
+): Promise<void> {
+  document
+    .querySelector<HTMLElement>("#account-header")
+    ?.removeAttribute("data-ready");
+  await ensureHeader(identity);
 }
 function row(
   item: Obligation,

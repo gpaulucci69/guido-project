@@ -10,6 +10,7 @@ export type UserProfile = {
   alias: string;
   avatar: string | null;
   avatarUrl: string | null;
+  email?: string;
 };
 
 export type ProfileUpdate = {

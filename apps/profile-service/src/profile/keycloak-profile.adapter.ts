@@ -54,15 +54,37 @@ export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {
     );
   }
   async get(sub: string): Promise<UserProfile> {
+    const user = await this.readUser(sub);
+    return this.toProfile(user, sub);
+  }
+
+  private async readUser(sub: string) {
     const response = await this.request(sub);
     if (!response.ok)
       throw new Error("No se pudo consultar el perfil en Keycloak.");
-    const user = (await response.json()) as {
+    return (await response.json()) as {
+      id?: string;
+      username?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      emailVerified?: boolean;
+      enabled?: boolean;
+      attributes?: Record<string, string[] | undefined>;
+      [key: string]: unknown;
+    };
+  }
+
+  private toProfile(
+    user: {
       id?: string;
       firstName?: string;
       lastName?: string;
+      email?: string;
       attributes?: Record<string, string[] | undefined>;
-    };
+    },
+    sub: string,
+  ): UserProfile {
     const attr = user.attributes ?? {};
     return {
       sub: user.id ?? sub,
@@ -71,26 +93,30 @@ export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {
       alias: attr.alias?.[0] ?? "",
       avatar: attr.avatar?.[0] ?? null,
       avatarUrl: null,
+      ...(user.email ? { email: user.email } : {}),
     };
   }
   async update(
     sub: string,
     update: Omit<ProfileUpdate, "avatar"> & { avatar?: string },
   ): Promise<UserProfile> {
-    const current = await this.get(sub);
-    const attributes: Record<string, string[]> = {
-      alias: [update.alias ?? current.alias],
-      ...(update.avatar
-        ? { avatar: [update.avatar] }
-        : current.avatar
-          ? { avatar: [current.avatar] }
-          : {}),
-    };
+    const currentUser = await this.readUser(sub);
+    const current = this.toProfile(currentUser, sub);
+    const attributes: Record<string, string[]> = Object.fromEntries(
+      Object.entries(currentUser.attributes ?? {}).filter(
+        (entry): entry is [string, string[]] => Array.isArray(entry[1]),
+      ),
+    );
+    attributes.alias = [update.alias ?? current.alias];
+    if (update.avatar) attributes.avatar = [update.avatar];
     const response = await this.request(sub, {
       method: "PUT",
       body: JSON.stringify({
+        ...currentUser,
         firstName: update.firstName ?? current.firstName,
         lastName: update.lastName ?? current.lastName,
+        email: currentUser.email ?? "",
+        emailVerified: currentUser.emailVerified ?? false,
         attributes,
       }),
     });
@@ -102,6 +128,7 @@ export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {
       lastName: update.lastName ?? current.lastName,
       alias: update.alias ?? current.alias,
       avatar: update.avatar ?? current.avatar,
+      ...(current.email ? { email: current.email } : {}),
     };
   }
 }

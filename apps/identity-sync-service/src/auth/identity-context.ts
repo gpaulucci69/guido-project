@@ -4,6 +4,7 @@ import { normalizePermissions } from "./permission-context";
 
 export type IdentityContext = {
   sub: string;
+  clientId: string;
   tenantId: string;
   permissions: readonly Permission[];
   roles: readonly string[];
@@ -47,6 +48,7 @@ function buildContext(
   if (!tenantId.trim()) throw new Error("tenant_id inválido");
   return {
     sub: claims.sub as string,
+    clientId: (claims.authorization?.client_id as string).trim(),
     tenantId,
     permissions: normalizePermissions(
       claims.permissions ?? claims.authorization,

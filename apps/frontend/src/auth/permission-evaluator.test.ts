@@ -12,6 +12,22 @@ describe("frontend permission evaluator", () => {
     expect(canAction(permissions, "view/customers/all")).toBe(true);
   });
 
+  it("normalizes route slashes without allowing partial matches", () => {
+    expect(
+      canRoute(
+        [{ type: "route", value: "home/client/services" }],
+        "/home/client/services",
+      ),
+    ).toBe(true);
+    expect(
+      canRoute(
+        [{ type: "route", value: "/home/client/services/details" }],
+        "/home/client/services",
+      ),
+    ).toBe(false);
+    expect(canRoute([], "/home/client/services")).toBe(false);
+  });
+
   it("denies undeclared permissions", () => {
     expect(canRoute(permissions, "/home/admin")).toBe(false);
     expect(canAction(permissions, "add/customer")).toBe(false);

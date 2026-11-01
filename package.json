@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@tanstack/table-core": "^8.21.3",
     "minio": "^8.0.7",
     "oidc-client-ts": "^3.5.0"
   }

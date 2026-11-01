@@ -9,6 +9,8 @@ import { logout } from "../auth/oidc-client";
 export type HeaderOptions = {
   onEditProfile: (profile: UserProfile) => void;
   onResetPassword: () => void;
+  /** Alias proveniente del token, usado si el adaptador de perfil aún no lo devuelve. */
+  identityAlias?: string;
 };
 
 export async function renderAppHeader(
@@ -18,7 +20,10 @@ export async function renderAppHeader(
   if (!profile) return null;
   const header = document.querySelector<HTMLElement>("#account-header");
   if (!header) return profile;
-  const label = fallbackAlias(profile);
+  const label = fallbackAlias({
+    ...profile,
+    alias: profile.alias.trim() || options.identityAlias?.trim() || "",
+  });
   const avatar = profile.avatarUrl
     ? `<img class="user-avatar" data-avatar-image src="${escapeAttribute(profile.avatarUrl)}" alt="" />`
     : `<span class="user-avatar user-initials" aria-hidden="true">${escapeHtml(initials(profile))}</span>`;
