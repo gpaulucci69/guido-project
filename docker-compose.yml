@@ -91,7 +91,9 @@ services:
       KC_FEATURES: "scripts"
     volumes:
       # Montaje del provider JAR compilado
-      - ./providers/role-routes-actions-mapper.jar:/opt/keycloak/providers/role-routes-actions-mapper.jar:ro
+      - ./cicd/keycloak/providers/role-routes-actions-mapper.jar:/opt/keycloak/providers/role-routes-actions-mapper.jar:ro
+      # Montaje del archivo exportado con con setup realm/client keycloak para su importación
+      - ./cicd/keycloak/import_setup/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     ports:
       - "8080:8080"
     networks:
