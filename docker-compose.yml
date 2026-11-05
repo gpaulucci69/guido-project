@@ -99,60 +99,60 @@ services:
     networks:
       - saas-network
 
-  keycloak-setup:
-    image: quay.io/keycloak/keycloak:26.1
-    container_name: keycloak_initial_setup
-    depends_on:
-      - keycloak
-    networks:
-      - saas-network
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        echo "==> Esperando disponibilidad del endpoint HTTP de Keycloak..."
-        until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak_saas:8080 --realm master --user admin --password admin 2>/dev/null; do
-          echo "Keycloak aún inicializando. Reintentando en 3s..."
-          sleep 3
-        done
-
-        echo "==> 1. Desactivando SSL estricto en realm master... (QUITAR EN PRODUCCIÓN)"
-        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
-
-        echo "==> 2. Verificando/Creando realm saas-contable..."
-        if ! /opt/keycloak/bin/kcadm.sh get realms/saas-contable >/dev/null 2>&1; then
-          /opt/keycloak/bin/kcadm.sh create realms -s realm=saas-contable -s enabled=true -s displayName="SaaS Contable" -s sslRequired=NONE
-          echo "Realm saas-contable creado exitosamente."
-        else
-          echo "Realm saas-contable ya existe. Asegurando sslRequired=NONE..."
-          /opt/keycloak/bin/kcadm.sh update realms/saas-contable -s sslRequired=NONE
-        fi
-
-        echo "==> 3. Verificando/Creando client guido dentro de saas-contable..."
-        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes 2>/dev/null)
-
-        if [ -z "$$CLIENT_ID" ]; then
-          /opt/keycloak/bin/kcadm.sh create clients -r saas-contable \
-            -s clientId=guido \
-            -s name="Guido Estudio Contable" \
-            -s enabled=true \
-            -s publicClient=true \
-            -s standardFlowEnabled=true \
-            -s directAccessGrantsEnabled=true \
-            -s 'redirectUris=["http://localhost:*", "http://138.68.11.125:*", "*"]' \
-            -s 'webOrigins=["+"]'
-          echo "Client guido creado con éxito (Public Client OIDC + PKCE)."
-        else
-          echo "Client guido ya existe en el realm saas-contable."
-        fi
-
-        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes)
-        /opt/keycloak/bin/kcadm.sh update clients/$$CLIENT_ID -r saas-contable \
-          -s 'redirectUris=["http://localhost:5173/*", "http://138.68.11.125:5173/*"]' \
-          -s 'webOrigins=["http://localhost:5173", "http://138.68.11.125:5173"]'
-
-        echo "==> Inicialización y setup de Keycloak completados con éxito."
-    restart: "no"
+#  keycloak-setup:
+#    image: quay.io/keycloak/keycloak:26.1
+#    container_name: keycloak_initial_setup
+#    depends_on:
+#      - keycloak
+#    networks:
+#      - saas-network
+#    entrypoint:
+#      - /bin/sh
+#      - -c
+#      - |
+#        echo "==> Esperando disponibilidad del endpoint HTTP de Keycloak..."
+#        until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak_saas:8080 --realm master --user admin --password admin 2>/dev/null; do
+#          echo "Keycloak aún inicializando. Reintentando en 3s..."
+#          sleep 3
+#        done
+#
+#        echo "==> 1. Desactivando SSL estricto en realm master... (QUITAR EN PRODUCCIÓN)"
+#        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+#
+#        echo "==> 2. Verificando/Creando realm saas-contable..."
+#        if ! /opt/keycloak/bin/kcadm.sh get realms/saas-contable >/dev/null 2>&1; then
+#          /opt/keycloak/bin/kcadm.sh create realms -s realm=saas-contable -s enabled=true -s displayName="SaaS Contable" -s sslRequired=NONE
+#          echo "Realm saas-contable creado exitosamente."
+#        else
+#          echo "Realm saas-contable ya existe. Asegurando sslRequired=NONE..."
+#          /opt/keycloak/bin/kcadm.sh update realms/saas-contable -s sslRequired=NONE
+#        fi
+#
+#        echo "==> 3. Verificando/Creando client guido dentro de saas-contable..."
+#        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes 2>/dev/null)
+#
+#        if [ -z "$$CLIENT_ID" ]; then
+#          /opt/keycloak/bin/kcadm.sh create clients -r saas-contable \
+#            -s clientId=guido \
+#            -s name="Guido Estudio Contable" \
+#            -s enabled=true \
+#            -s publicClient=true \
+#            -s standardFlowEnabled=true \
+#            -s directAccessGrantsEnabled=true \
+#            -s 'redirectUris=["http://localhost:*", "http://138.68.11.125:*", "*"]' \
+#            -s 'webOrigins=["+"]'
+#          echo "Client guido creado con éxito (Public Client OIDC + PKCE)."
+#        else
+#          echo "Client guido ya existe en el realm saas-contable."
+#        fi
+#
+#        CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r saas-contable -q clientId=guido --fields id --format csv --noquotes)
+#        /opt/keycloak/bin/kcadm.sh update clients/$$CLIENT_ID -r saas-contable \
+#          -s 'redirectUris=["http://localhost:5173/*", "http://138.68.11.125:5173/*"]' \
+#          -s 'webOrigins=["http://localhost:5173", "http://138.68.11.125:5173"]'
+#
+#        echo "==> Inicialización y setup de Keycloak completados con éxito."
+#    restart: "no"
 
   billing-workflow:
     build:

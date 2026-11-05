@@ -46,3 +46,22 @@ services:
     ports:
       - "8080:8080"
 ```
+
+### STEP 04 (REBOOT KEYCLOAK WITH A CLEAN SETUP)
+
+Reboot Keycloak with a clean DB.
+The import flag only acts on an empty database: --import-realm only processes the JSON file if the realm does not exist in the database yet. If  already have the persistent volume 'keycloak_data', if the database was previously initialized, Keycloak will ignore the file.
+In order to --import-realm read the JSON and load it into PostgreSQL:
+
+```bash
+# 1. Stop Keycloak services and delete the volume from it`s DB
+docker compose stop keycloak keycloak-db
+docker compose rm -f keycloak keycloak-db
+docker volume rm guido-project_keycloak_data # (o el prefijo de volumen de tu carpeta: docker volume ls | grep keycloak_data)
+# o también:
+docker volume rm $(docker volume ls -q | grep keycloak_data)
+
+# 2. Levantar nuevamente Keycloak y su base de datos
+docker compose up -d keycloak-db
+docker compose up -d keycloak
+```
