@@ -86,6 +86,7 @@ async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
       renderWelcome(
         profile?.firstName ?? identity.firstName,
         profile?.lastName ?? identity.lastName,
+        profile?.alias ?? identity.alias
       ),
       navigate,
       clientName,

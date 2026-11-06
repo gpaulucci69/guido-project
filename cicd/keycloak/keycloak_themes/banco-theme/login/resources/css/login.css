@@ -1,0 +1,262 @@
+/* =========================================================
+   1. Reset general y estructura de la página
+   ========================================================= */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0f172a; /* Slate 900 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #f1f5f9;
+}
+
+/* =========================================================
+   2. Tarjeta principal contenedora
+   ========================================================= */
+.card-dark {
+  background-color: #1e293b; /* Slate 800 */
+  border: 1px solid #334155; /* Slate 700 */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   3. Encabezado: Logo y Nombre del Cliente
+   ========================================================= */
+.header-container {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo-wrapper {
+  margin-bottom: 14px;
+}
+
+.client-logo {
+  max-width: 180px;
+  max-height: 70px;
+  object-fit: contain;
+}
+
+.client-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+}
+
+.client-subtitle {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* =========================================================
+   4. Mensajes y alertas del sistema (errores, éxito, avisos)
+   ========================================================= */
+.alert-box {
+  padding: 11px 14px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.alert-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.alert-info {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* =========================================================
+   5. Formulario: etiquetas, inputs y botones
+   ========================================================= */
+.card-dark label {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+  display: inline-block;
+}
+
+/* Inputs estándar */
+.card-dark input[type="text"],
+.card-dark input[type="password"] {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card-dark input[type="text"]:focus,
+.card-dark input[type="password"]:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 1px #38bdf8 !important;
+}
+
+/* Botón principal de login */
+.card-dark input[type="submit"],
+.card-dark button[type="submit"] {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 11px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  width: 100% !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.card-dark input[type="submit"]:hover,
+.card-dark button[type="submit"]:hover {
+  background-color: #1d4ed8 !important;
+}
+
+/* Enlaces secundarios */
+.card-dark a {
+  color: #38bdf8 !important;
+  text-decoration: none !important;
+  font-size: 13px !important;
+}
+
+.card-dark a:hover {
+  text-decoration: underline !important;
+}
+
+/* =========================================================
+   6. Ojo al lado del input y flotando sobre el fondo (Sin caja)
+   ========================================================= */
+
+/* Fila horizontal: campo a la izquierda, ojo al lado a la derecha */
+.pf-v5-c-input-group,
+.pf-c-input-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* El input ocupa todo el espacio disponible */
+.pf-v5-c-input-group > input,
+.pf-c-input-group > input,
+.pf-v5-c-input-group__item:first-child,
+.pf-c-input-group__item:first-child {
+  flex: 1 1 auto !important;
+  border-radius: 6px !important;
+}
+
+/* El contenedor del botón en PatternFly no añade bordes ni fondos */
+.pf-v5-c-input-group__item:has(button),
+.pf-c-input-group__item:has(button),
+.pf-v5-c-input-group__item,
+.pf-c-input-group__item {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* El botón del ojo: completamente invisible de contenedor */
+.card-dark button.pf-v5-c-button,
+.card-dark button.pf-c-button,
+.card-dark button[aria-label*="password"],
+.card-dark button[aria-label*="contraseña"],
+.card-dark button[data-password-toggle] {
+  position: static !important;
+  transform: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 4px !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}
+
+/* Anular pseudoelementos de PatternFly que dibujan bordes artificiales */
+.card-dark button.pf-v5-c-button::before,
+.card-dark button.pf-v5-c-button::after,
+.card-dark button.pf-c-button::before,
+.card-dark button.pf-c-button::after,
+.pf-v5-c-input-group::before,
+.pf-v5-c-input-group::after,
+.pf-c-input-group::before,
+.pf-c-input-group::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+}
+
+/* Icono SVG y trazos internos: flotando directamente sobre la tarjeta */
+.card-dark button svg,
+.card-dark button svg path,
+.card-dark button svg g,
+.card-dark button i {
+  fill: #64748b !important;
+  stroke: #64748b !important;
+  color: #64748b !important;
+  width: 18px !important;
+  height: 18px !important;
+  pointer-events: none !important;
+  transition: fill 0.2s ease, stroke 0.2s ease, opacity 0.2s ease !important;
+  opacity: 0.8;
+}
+
+/* Hover: ilumina solo el icono al pasar el mouse */
+.card-dark button:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.card-dark button:hover svg,
+.card-dark button:hover svg path,
+.card-dark button:hover svg g,
+.card-dark button:hover i {
+  fill: #38bdf8 !important;
+  stroke: #38bdf8 !important;
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+.card-dark button:active {
+  background: transparent !important;
+  background-color: transparent !important;
+}

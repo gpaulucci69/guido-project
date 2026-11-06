@@ -43,11 +43,10 @@ export async function updatePerson(
   );
 }
 
-export async function deletePerson(
+export async function updatePersonStatus(
   id: string,
   type: PeopleType,
-): Promise<void> {
-  await api(`/people/${encodeURIComponent(id)}?type=${type}`, {
-    method: "DELETE",
-  });
+  enabled: boolean,
+): Promise<AdministrableIdentity> {
+  return updatePerson(id, type, { enabled });
 }

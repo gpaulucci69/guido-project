@@ -9,8 +9,16 @@ import type {
 } from "../../../../../packages/contracts/people.js";
 import type { FrontendPermission } from "../../auth/session";
 import { canAction } from "../../auth/permission-evaluator";
-import { deletePerson, listPeople } from "./people-api";
+import { listPeople, updatePersonStatus } from "./people-api";
 import { openPeopleForm } from "./people-form";
+
+const actionIcons = {
+  edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 3.3 3.3-.8L18.2 7.3a2.1 2.1 0 0 0-3-3L4 16.5Z"/><path d="m13.8 5.2 3 3"/></svg>',
+  deactivate:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/></svg>',
+  activate:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8 12h8M12 8v8"/></svg>',
+};
 
 export type PeopleViewOptions = {
   type: PeopleType;
@@ -51,9 +59,10 @@ export async function renderPeopleView(
     });
     const headers = table.getHeaderGroups()[0]?.headers ?? [];
     const rows = table.getRowModel().rows;
-    const actions =
-      canAction(options.permissions, `${options.type}/edit`) ||
-      canAction(options.permissions, `${options.type}/delete`);
+    const canEdit = canAction(options.permissions, `${options.type}/edit`);
+    const canUpdate = canAction(options.permissions, `${options.type}/update`);
+    const canChangeStatus = canEdit && canUpdate;
+    const actions = canEdit || canChangeStatus;
     if (actions)
       columns.push({ id: "actions", header: "Acciones", cell: () => "" });
     if (state)
@@ -76,7 +85,7 @@ export async function renderPeopleView(
                     })
                     .join(
                       "",
-                    )}${actions ? `<td class="people-actions">${canAction(options.permissions, `${options.type}/edit`) ? `<button class="link" data-edit="${row.original.id}">Editar</button>` : ""}${canAction(options.permissions, `${options.type}/delete`) ? `<button class="link danger" data-delete="${row.original.id}">Eliminar</button>` : ""}</td>` : ""}</tr>`,
+                    )}${actions ? `<td class="people-actions">${canEdit ? `<button class="link icon-action" type="button" data-edit="${row.original.id}" aria-label="Editar" title="Editar">${actionIcons.edit}</button>` : ""}${canChangeStatus ? `<button class="link icon-action ${row.original.enabled ? "danger" : ""}" type="button" data-status="${row.original.id}" data-enabled="${row.original.enabled}" aria-label="${row.original.enabled ? "Inactivar" : "Activar"}" title="${row.original.enabled ? "Inactivar" : "Activar"}">${row.original.enabled ? actionIcons.deactivate : actionIcons.activate}</button>` : ""}</td>` : ""}</tr>`,
               )
               .join("")
           : `<tr><td colspan="${columns.length + (actions ? 1 : 0)}" class="empty">No hay registros para mostrar.</td></tr>`
@@ -105,18 +114,28 @@ export async function renderPeopleView(
         }),
       );
     container
-      .querySelectorAll<HTMLButtonElement>("[data-delete]")
+      .querySelectorAll<HTMLButtonElement>("[data-status]")
       .forEach((button) =>
         button.addEventListener("click", async () => {
-          if (!window.confirm("¿Querés eliminar esta identidad?")) return;
+          const enabled = button.dataset.enabled === "true";
+          const action = enabled ? "Inactivar" : "Activar";
+          const nextEnabled = !enabled;
+          if (
+            !window.confirm(`¿Querés ${action.toLowerCase()} esta identidad?`)
+          )
+            return;
           try {
-            await deletePerson(button.dataset.delete ?? "", options.type);
+            await updatePersonStatus(
+              button.dataset.status ?? "",
+              options.type,
+              nextEnabled,
+            );
             await options.onChanged();
           } catch (error) {
             window.alert(
               error instanceof Error
                 ? error.message
-                : "No se pudo eliminar la identidad.",
+                : `No se pudo ${action.toLowerCase()} la identidad.`,
             );
           }
         }),

@@ -1,11 +1,12 @@
 import { fallbackAlias } from "../../auth/profile-normalization.js";
 
-export function welcomeName(firstName: string, lastName: string): string {
-  return fallbackAlias({ firstName, lastName, alias: "" });
+export function welcomeName(firstName: string, lastName: string, alias: string): string {
+  return fallbackAlias({ firstName, lastName, alias });
 }
 
-export function renderWelcome(firstName: string, lastName: string): string {
-  return `<section class="welcome-view"><span class="eyebrow">INICIO</span><h1>Bienvenido ${escapeHtml(welcomeName(firstName, lastName))}</h1><p>Este es tu espacio de trabajo en SAAS Contable.</p></section>`;
+export function renderWelcome(firstName: string, lastName: string, alias: string): string {
+  // return `<section class="welcome-view"><span class="eyebrow">INICIO</span><h1>Bienvenido ${escapeHtml(welcomeName(firstName, lastName))}</h1><p>Este es tu espacio de trabajo en SAAS Contable.</p></section>`;
+  return `<section class="welcome-view"><span class="eyebrow">INICIO</span><h1>Bienvenido ${escapeHtml(welcomeName(firstName, lastName, alias))}</h1><p>Este es tu espacio de trabajo en contable.</p></section>`;
 }
 
 function escapeHtml(value: string): string {

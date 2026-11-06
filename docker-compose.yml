@@ -94,6 +94,8 @@ services:
       - ./cicd/keycloak/providers/role-routes-actions-mapper.jar:/opt/keycloak/providers/role-routes-actions-mapper.jar:ro
       # Montaje del archivo exportado con con setup realm/client keycloak para su importación
       - ./cicd/keycloak/import_setup/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      # Montaje de temas de keycloak
+      - ./cicd/keycloak/keycloak_themes:/opt/keycloak/themes:ro
     ports:
       - "8080:8080"
     networks:

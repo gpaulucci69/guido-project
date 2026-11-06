@@ -288,6 +288,13 @@ body {
 .modal-message {
   min-height: 1.5em;
 }
+.modal-message.is-error {
+  padding: 10px 12px;
+  color: #a43838;
+  background: #fff1f1;
+  border: 1px solid #f0caca;
+  border-radius: 9px;
+}
 .password-modal iframe {
   width: 100%;
   min-height: 360px;
@@ -387,10 +394,43 @@ button {
   white-space: nowrap;
 }
 .people-actions .link + .link {
-  margin-left: 12px;
+  margin-left: 6px;
 }
 .people-actions .danger {
   color: #c64545;
+}
+.people-actions .icon-action {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #5271ff;
+  background: transparent;
+  vertical-align: middle;
+}
+.people-actions .icon-action:hover {
+  background: #eef2ff;
+  border-color: #dbe2ff;
+}
+.people-actions .icon-action:focus-visible {
+  outline: 3px solid #5271ff44;
+  outline-offset: 2px;
+  border-color: #5271ff;
+}
+.people-actions .icon-action.danger {
+  color: #c64545;
+}
+.people-actions .icon-action svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 .people-view .panel {
   margin-top: 24px;
@@ -454,6 +494,41 @@ input {
   border-radius: 9px;
   font: inherit;
 }
+.status-field {
+  position: relative;
+}
+.status-select {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 7px;
+  padding: 11px 40px 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #17202a;
+  background-color: #fff;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.status-select:hover {
+  border-color: #8d9cf0;
+}
+.status-select:focus-visible {
+  outline: 3px solid #5271ff44;
+  outline-offset: 2px;
+  border-color: #5271ff;
+}
+.status-select:disabled {
+  cursor: not-allowed;
+  color: #7b8594;
+  background: #f1f4f8;
+  border-color: #dce2eb;
+  opacity: 1;
+}
 form div {
   grid-column: 1 / -1;
 }
@@ -500,6 +575,9 @@ form div {
     align-items: flex-start;
     gap: 16px;
     flex-direction: column;
+  }
+  form {
+    grid-template-columns: 1fr;
   }
   .cards {
     grid-template-columns: 1fr;

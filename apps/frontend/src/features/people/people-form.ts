@@ -26,7 +26,7 @@ export function openPeopleForm(options: PeopleFormOptions): void {
   const modal = document.createElement("div");
   modal.id = "people-modal";
   modal.className = "modal-backdrop";
-  modal.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="people-form-title"><button class="modal-close" type="button" aria-label="Cerrar">×</button><h2 id="people-form-title">${editing ? "Editar" : "Nuevo"} ${options.type === "client" ? "cliente" : "contador"}</h2><form id="people-form"><label>Nombre<input name="firstName" required value="${escapeHtml(person?.firstName ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Apellido<input name="lastName" required value="${escapeHtml(person?.lastName ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Alias<input name="alias" value="${escapeHtml(person?.alias ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Email<input name="email" type="email" required value="${escapeHtml(person?.email ?? "")}" ${readonly ? "readonly disabled" : ""}></label>${editing ? `<label>Estado<select name="enabled" ${readonly ? "disabled" : ""}><option value="true" ${person?.enabled ? "selected" : ""}>Activo</option><option value="false" ${person?.enabled === false ? "selected" : ""}>Inactivo</option></select></label>` : ""}<p class="modal-message" role="status"></p><div class="modal-actions"><button type="submit" ${!canEdit || !canUpdate ? "disabled" : ""}>${editing ? "Actualizar" : "Crear"}</button><button type="button" class="secondary" data-cancel>Cancelar</button></div></form></section>`;
+  modal.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="people-form-title"><button class="modal-close" type="button" aria-label="Cerrar">×</button><h2 id="people-form-title">${editing ? "Editar" : "Nuevo"} ${options.type === "client" ? "cliente" : "contador"}</h2><form id="people-form"><label>Nombre<input name="firstName" required value="${escapeHtml(person?.firstName ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Apellido<input name="lastName" required value="${escapeHtml(person?.lastName ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Alias<input name="alias" value="${escapeHtml(person?.alias ?? "")}" ${readonly ? "readonly disabled" : ""}></label><label>Email<input name="email" type="email" required value="${escapeHtml(person?.email ?? "")}" ${readonly ? "readonly disabled" : ""}></label>${editing ? `<label class="status-field">Estado<select class="status-select" name="enabled" aria-label="Estado" ${readonly ? "disabled" : ""}><option value="true" ${person?.enabled ? "selected" : ""}>Activo</option><option value="false" ${person?.enabled === false ? "selected" : ""}>Inactivo</option></select></label>` : ""}<p class="modal-message" role="status" aria-live="polite"></p><div class="modal-actions"><button type="submit" ${!canEdit || !canUpdate ? "disabled" : ""}>${editing ? "Actualizar" : "Crear"}</button><button type="button" class="secondary" data-cancel>Cancelar</button></div></form></section>`;
   document.body.append(modal);
   const close = () => {
     modal.remove();
@@ -54,11 +54,13 @@ export function openPeopleForm(options: PeopleFormOptions): void {
       close();
     } catch (error) {
       const message = modal.querySelector(".modal-message");
-      if (message)
+      if (message) {
         message.textContent =
           error instanceof Error
             ? error.message
             : "No se pudo guardar la identidad.";
+        message.classList.add("is-error");
+      }
     }
   });
 }
