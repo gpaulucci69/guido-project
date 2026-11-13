@@ -23,6 +23,7 @@ import {
 import { renderPeopleView } from "./features/people/people-view";
 import { loadProfile } from "./auth/profile";
 import { showSessionExpiredModal } from "./components/session-expired-modal";
+import { renderClientsView } from "./features/clients/clients-view";
 type Obligation = {
   id: string;
   serviceDescription: string;
@@ -130,11 +131,14 @@ async function render(identity: Awaited<ReturnType<typeof sessionIdentity>>) {
     );
     const page = document.querySelector<HTMLElement>("#page-content");
     if (!page) return;
-    await renderPeopleView(page, {
-      type: route === CLIENT_LIST_ROUTE ? "client" : "user",
-      permissions: identity.permissions,
-      onChanged: () => render(identity),
-    });
+    if (route === CLIENT_LIST_ROUTE)
+      await renderClientsView(page, identity.permissions, () => void render(identity));
+    else
+      await renderPeopleView(page, {
+        type: "user",
+        permissions: identity.permissions,
+        onChanged: () => render(identity),
+      });
     await ensureHeader(identity);
     return;
   }
