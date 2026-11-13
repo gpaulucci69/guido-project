@@ -65,3 +65,14 @@ docker volume rm $(docker volume ls -q | grep keycloak_data)
 docker compose up -d keycloak-db
 docker compose up -d keycloak
 ```
+
+### STEP 05 (DISABLE HTTPS FOR DEV ENVIRONMENT)
+Run this inside KC Docker containter
+```bash
+/opt/keycloak/bin/kcadm.sh update realms/master \
+  -s sslRequired=NONE \
+  --server http://localhost:8080 \
+  --realm master \
+  --user admin \
+  --password 'TU_PASSWORD'
+```
