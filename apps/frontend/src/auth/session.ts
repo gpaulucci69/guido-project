@@ -106,7 +106,11 @@ export function identityFromUser(user: User): FrontendIdentity {
 
 export async function sessionIdentity(): Promise<FrontendIdentity | null> {
   const user = await currentUser();
-  return user ? identityFromUser(user) : null;
+  if (!user) return null;
+  const token = await accessToken();
+  if (!token) return null;
+  const refreshedUser = await currentUser();
+  return refreshedUser ? identityFromUser(refreshedUser) : null;
 }
 
 export {

@@ -1,5 +1,10 @@
 import "./styles.css";
-import { accessToken, completeLogin, sessionIdentity } from "./auth/session";
+import {
+  accessToken,
+  completeLogin,
+  oidcUserManager,
+  sessionIdentity,
+} from "./auth/session";
 import { renderLogin } from "./auth/auth-view";
 import { createApiClient } from "./lib/api/client";
 import { canAction } from "./auth/permission-evaluator";
@@ -17,6 +22,7 @@ import {
 } from "./components/side-menu";
 import { renderPeopleView } from "./features/people/people-view";
 import { loadProfile } from "./auth/profile";
+import { showSessionExpiredModal } from "./components/session-expired-modal";
 type Obligation = {
   id: string;
   serviceDescription: string;
@@ -29,11 +35,27 @@ const api = `${window.location.protocol}//${window.location.hostname}:3000/api/v
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("No se encontró el contenedor");
 const root = app;
+let sessionExpired = false;
+function handleSessionExpired() {
+  if (sessionExpired) return;
+  sessionExpired = true;
+  showSessionExpiredModal(() => {
+    void oidcUserManager.removeUser().finally(() => {
+      window.history.replaceState({}, document.title, "/");
+      renderLogin(root);
+    });
+  });
+}
+window.addEventListener("oidc-session-expired", handleSessionExpired);
 const money = (value: string) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(
     Number(value),
   );
-const request = createApiClient({ baseUrl: api, getToken: accessToken });
+const request = createApiClient({
+  baseUrl: api,
+  getToken: accessToken,
+  onSessionExpired: handleSessionExpired,
+});
 let resolvedClientContext:
   Awaited<ReturnType<typeof loadClientContext>> | undefined;
 async function getClientContext() {

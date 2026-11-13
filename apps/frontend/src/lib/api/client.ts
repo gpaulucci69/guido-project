@@ -9,6 +9,7 @@ export class ApiError extends Error {
 export type ApiClientOptions = {
   baseUrl: string;
   getToken?: () => Promise<string | undefined>;
+  onSessionExpired?: () => void;
 };
 
 export function createApiClient(options: ApiClientOptions) {
@@ -16,7 +17,13 @@ export function createApiClient(options: ApiClientOptions) {
     path: string,
     init: RequestInit = {},
   ): Promise<T> {
-    const token = await options.getToken?.();
+    let token: string | undefined;
+    try {
+      token = await options.getToken?.();
+    } catch (error) {
+      options.onSessionExpired?.();
+      throw error;
+    }
     const headers = new Headers(init.headers);
     headers.set("accept", "application/json");
     if (init.body && !(init.body instanceof FormData))

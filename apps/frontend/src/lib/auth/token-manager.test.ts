@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TokenManager } from "./token-manager.js";
+import { TokenManager, type TokenSet } from "./token-manager.js";
 
 describe("TokenManager", () => {
   it("refreshes expiring tokens and returns the new access token", async () => {
@@ -28,5 +28,25 @@ describe("TokenManager", () => {
       "renovación fallida",
     );
     await expect(manager.accessToken(1_000)).resolves.toBeUndefined();
+  });
+
+  it("shares one renewal between concurrent requests", async () => {
+    let refreshCalls = 0;
+    let resolveRefresh!: (tokens: TokenSet) => void;
+    const manager = new TokenManager(
+      () =>
+        new Promise((resolve) => {
+          refreshCalls += 1;
+          resolveRefresh = resolve;
+        }),
+    );
+    manager.set({ accessToken: "old", expiresAt: 0, refreshToken: "refresh" });
+
+    const first = manager.accessToken(1_000);
+    const second = manager.accessToken(1_000);
+    resolveRefresh({ accessToken: "new", expiresAt: 2_000_000 });
+
+    await expect(Promise.all([first, second])).resolves.toEqual(["new", "new"]);
+    expect(refreshCalls).toBe(1);
   });
 });

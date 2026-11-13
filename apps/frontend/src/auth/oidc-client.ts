@@ -46,6 +46,7 @@ Log.setLogger(console);
 Log.setLevel(Log.INFO);
 
 export const oidcUserManager = new UserManager(settings);
+let renewalPromise: Promise<string> | undefined;
 
 export function login(): Promise<void> {
   return oidcUserManager.signinRedirect();
@@ -63,17 +64,33 @@ export function currentUser(): Promise<User | null> {
   return oidcUserManager.getUser();
 }
 
-export function accessToken(): Promise<string | undefined> {
-  return currentUser().then((user) => user?.access_token);
+export async function accessToken(): Promise<string | undefined> {
+  const user = await currentUser();
+  if (!user) return undefined;
+  const expiresAt = (user.expires_at ?? 0) * 1000;
+  if (expiresAt > Date.now() + 30_000) return user.access_token;
+  return renewAccessToken();
 }
 
 export async function renewAccessToken(): Promise<string> {
+  if (renewalPromise) return renewalPromise;
+  renewalPromise = renewAccessTokenOnce();
+  try {
+    return await renewalPromise;
+  } finally {
+    renewalPromise = undefined;
+  }
+}
+
+async function renewAccessTokenOnce(): Promise<string> {
   try {
     const user = await oidcUserManager.signinSilent();
     if (!user) throw new Error("No se pudo renovar la sesión");
     return user.access_token;
   } catch (error) {
     await oidcUserManager.removeUser();
+    if (typeof window !== "undefined")
+      window.dispatchEvent(new Event("oidc-session-expired"));
     throw new Error("La sesión expiró. Iniciá sesión nuevamente.", {
       cause: error,
     });
