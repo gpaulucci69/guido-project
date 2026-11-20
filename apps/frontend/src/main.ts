@@ -32,7 +32,11 @@ type Obligation = {
   balanceDue: string;
   totalAmount: string;
 };
-const api = `${window.location.protocol}//${window.location.hostname}:3000/api/v1`;
+const api =
+  (typeof import.meta.env?.VITE_API_URL === "string"
+    ? import.meta.env.VITE_API_URL
+    : undefined) ??
+  `${window.location.protocol}//${window.location.hostname}:3000/api/v1`;
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("No se encontró el contenedor");
 const root = app;
@@ -215,6 +219,7 @@ async function ensureHeader(
   if (!force && header?.dataset.ready === "true") return;
   await renderAppHeader({
     identityAlias: identity.alias,
+    clientRoles: identity.roles,
     onEditProfile: (profile) =>
       openProfileModal(profile, async () => {
         await render(identity);

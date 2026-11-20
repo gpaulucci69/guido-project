@@ -76,3 +76,23 @@ Run this inside KC Docker containter
   --user admin \
   --password 'TU_PASSWORD'
 ```
+
+### STEP 06 (CREATE LOCAL DIRS FOR DOCKER VOLUMES)
+```bash
+sudo mkdir -p /srv/saas/{postgres,keycloak-db,minio,nats}
+```
+
+```bash
+docker run --rm --entrypoint sh postgres:16-alpine -c 'id postgres'
+docker run --rm --entrypoint sh nats:2.10-alpine -c 'id'
+docker run --rm --entrypoint sh bitnamilegacy/minio:2025.7.23-debian-12-r5 -c 'id'
+
+sudo chown UID:GID ./srv/saas/postgres ./srv/saas/keycloak-db
+sudo chmod 700 ./srv/saas/postgres ./srv/saas/keycloak-db
+
+sudo chown UID:GID ./srv/saas/nats ./srv/saas/minio
+sudo chmod 750 ./srv/saas/nats ../srv/saas/minio
+
+sudo chmod +a 'user:gus allow list,search,readattr,writeattr,readextattr,writeextattr,readsecurity,add_file,add_subdirectory,delete_child,file_inherit,directory_inherit' \
+  ./srv/saas/{postgres,keycloak-db,nats,minio}
+```

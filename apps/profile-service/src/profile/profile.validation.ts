@@ -3,7 +3,7 @@ const allowed = new Map([
   ["image/png", "png"],
   ["image/webp", "webp"],
 ]);
-const maxAvatarBytes = 5 * 1024 * 1024;
+export const maxAvatarBytes = 5 * 1024 * 1024;
 
 export function validateText(
   value: string | undefined,

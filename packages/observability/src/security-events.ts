@@ -10,6 +10,7 @@ export type SecurityEvent = {
   sub?: string;
   tenant_id?: string;
   requiredPermission?: string;
+  authenticationStage?: "bearer-header" | "token-verification" | "tenant-resolution";
   traceId: string;
   result: "allowed" | "denied";
   occurredAt: string;

@@ -9,6 +9,14 @@ export type ClientSummary = {
   email: string | null;
   status: ClientStatus;
   updatedAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  legalName?: string | null;
+  tradeName?: string | null;
+  phone?: string | null;
+  taxAddress?: string | null;
+  legalRepresentativeName?: string | null;
+  legalRepresentativeTaxId?: string | null;
 };
 
 export type ClientCreate =

@@ -1,26 +1,30 @@
+BEGIN;
+DO $$ BEGIN
+  CREATE TYPE "ClientType" AS ENUM ('INDIVIDUAL', 'LEGAL_ENTITY');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 ALTER TABLE accounting_clients
-  ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'LEGAL_ENTITY',
-  ADD COLUMN IF NOT EXISTS first_name VARCHAR(120),
-  ADD COLUMN IF NOT EXISTS last_name VARCHAR(120),
-  ADD COLUMN IF NOT EXISTS legal_name VARCHAR(200),
-  ADD COLUMN IF NOT EXISTS trade_name VARCHAR(200),
-  ADD COLUMN IF NOT EXISTS tax_address VARCHAR(300),
-  ADD COLUMN IF NOT EXISTS legal_representative_name VARCHAR(200),
-  ADD COLUMN IF NOT EXISTS legal_representative_tax_id VARCHAR(11),
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  ADD COLUMN IF NOT EXISTS type "ClientType" NOT NULL DEFAULT 'LEGAL_ENTITY',
+  ADD COLUMN IF NOT EXISTS "firstName" VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS "lastName" VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS "legalName" VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS "tradeName" VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS "taxAddress" VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS "legalRepresentativeName" VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS "legalRepresentativeTaxId" VARCHAR(11),
+  ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 UPDATE accounting_clients
-SET legal_name = NULLIF(business_name, ''),
-    type = 'LEGAL_ENTITY'
-WHERE legal_name IS NULL;
+SET "legalName" = NULLIF("businessName", '')
+WHERE type = 'LEGAL_ENTITY' AND "legalName" IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS accounting_clients_tenant_id_cuit_key
-  ON accounting_clients (tenant_id, cuit);
+CREATE UNIQUE INDEX IF NOT EXISTS "accounting_clients_tenantId_cuit_key"
+  ON accounting_clients ("tenantId", cuit);
 
-ALTER TABLE accounting_clients
-  ADD CONSTRAINT accounting_clients_type_check
-  CHECK (type IN ('INDIVIDUAL', 'LEGAL_ENTITY'));
-
+DO $$ BEGIN
 ALTER TABLE accounting_clients
   ADD CONSTRAINT accounting_clients_representative_pair_check
-  CHECK ((legal_representative_name IS NULL) = (legal_representative_tax_id IS NULL));
+  CHECK (("legalRepresentativeName" IS NULL) = ("legalRepresentativeTaxId" IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+COMMIT;

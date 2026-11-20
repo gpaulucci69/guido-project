@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    "experimentalDecorators": true,
     "noImplicitAny": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
@@ -12,5 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["apps", "packages", "tests"]
+  "include": ["apps", "packages", "tests"],
+  "exclude": ["node_modules", "apps/client-gateway"]
 }

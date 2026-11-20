@@ -16,6 +16,7 @@ type KeycloakUser = {
   [key: string]: unknown;
 };
 type PeopleCreateInput = PeopleCreate & { clientId: string };
+type ClientRole = { id?: string; name?: string; [key: string]: unknown };
 
 export class KeycloakAdminAdapter {
   private readonly base = process.env.KEYCLOAK_URL ?? "http://localhost:8080";
@@ -70,6 +71,10 @@ export class KeycloakAdminAdapter {
       enabled: user.enabled !== false,
       type,
       clientId: user.attributes?.client_id?.[0] ?? "",
+      clientRole: user.attributes?.client_role?.[0] ?? "",
+      startDate: user.attributes?.start_date?.[0] ?? "",
+      birthDate: user.attributes?.birth_date?.[0] ?? "",
+      avatar: user.attributes?.avatar?.[0] ?? "",
     };
   }
 
@@ -80,13 +85,53 @@ export class KeycloakAdminAdapter {
     const response = await this.request("/users?max=1000");
     if (!response.ok)
       throw new Error("No se pudieron consultar las identidades en Keycloak.");
-    return ((await response.json()) as KeycloakUser[])
+    const users = ((await response.json()) as KeycloakUser[])
       .map((user) => this.map(user))
       .filter(
         (user): user is AdministrableIdentity & { clientId: string } =>
           user?.type === type && user.clientId === clientId,
       )
       .map(({ clientId: _clientId, ...identity }) => identity);
+    return Promise.all(users.map(async (identity) => ({
+      ...identity,
+      clientRole: await this.assignedClientRole(identity.id, clientId) || identity.clientRole,
+    })));
+  }
+
+  private async clientUuid(clientId: string): Promise<string> {
+    const response = await this.request(`/clients?clientId=${encodeURIComponent(clientId)}`);
+    if (!response.ok) throw new Error("No se pudo consultar el cliente Keycloak.");
+    const client = ((await response.json()) as Array<{ id?: string; clientId?: string }>).find((item) => item.clientId === clientId);
+    if (!client?.id) throw new Error("Cliente Keycloak no encontrado.");
+    return client.id;
+  }
+
+  private async assignedClientRole(userId: string, clientId: string): Promise<string> {
+    const response = await this.request(`/users/${encodeURIComponent(userId)}/role-mappings`);
+    if (!response.ok) return "";
+    const mappings = (await response.json()) as {
+      clientMappings?: Record<string, { mappings?: ClientRole[] }>;
+    };
+    const roles = mappings.clientMappings?.[clientId]?.mappings ?? [];
+    return roles.find((role) => typeof role.name === "string")?.name ?? "";
+  }
+
+  async clientRoles(clientId: string): Promise<string[]> {
+    const clientIdValue = await this.clientUuid(clientId);
+    const response = await this.request(`/clients/${encodeURIComponent(clientIdValue)}/roles`);
+    if (!response.ok) throw new Error("No se pudieron consultar los roles de Keycloak.");
+    return ((await response.json()) as ClientRole[]).map((role) => role.name ?? "").filter(Boolean).sort();
+  }
+
+  async assignClientRole(userId: string, clientId: string, roleName: string): Promise<void> {
+    const clients = await this.request(`/clients?clientId=${encodeURIComponent(clientId)}`);
+    const client = ((await clients.json()) as Array<{ id?: string; clientId?: string }>).find((item) => item.clientId === clientId);
+    if (!client?.id) throw new Error("Cliente Keycloak no encontrado.");
+    const roleResponse = await this.request(`/clients/${encodeURIComponent(client.id)}/roles/${encodeURIComponent(roleName)}`);
+    if (!roleResponse.ok) throw new Error("El client role no pertenece al cliente Keycloak activo.");
+    const role = (await roleResponse.json()) as ClientRole;
+    const response = await this.request(`/users/${encodeURIComponent(userId)}/role-mappings/clients/${encodeURIComponent(client.id)}`, { method: "POST", body: JSON.stringify([role]) });
+    if (!response.ok) throw new Error("No se pudo asignar el client role en Keycloak.");
   }
 
   async get(id: string): Promise<{
@@ -110,6 +155,7 @@ export class KeycloakAdminAdapter {
       type: [input.type],
       client_id: [input.clientId],
       alias: [input.alias ?? ""],
+      client_role: [input.clientRole ?? ""],
     };
     const response = await this.request("/users", {
       method: "POST",
@@ -140,6 +186,8 @@ export class KeycloakAdminAdapter {
       ...(current.raw.attributes ?? {}),
       type: [current.identity.type],
       alias: [input.alias ?? current.identity.alias],
+      client_role: [input.clientRole ?? current.identity?.clientRole ?? ""],
+      ...(input.avatar ? { avatar: [input.avatar] } : {}),
     };
     const response = await this.request(`/users/${encodeURIComponent(id)}`, {
       method: "PUT",

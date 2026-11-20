@@ -33,7 +33,10 @@ export function createApiClient(options: ApiClientOptions) {
       ...init,
       headers,
     });
-    if (response.ok) return (await response.json()) as T;
+    if (response.ok) {
+      if (response.status === 204) return undefined as T;
+      return (await response.json()) as T;
+    }
     const problem = (await response.json()) as ProblemDetails;
     throw new ApiError(problem);
   };

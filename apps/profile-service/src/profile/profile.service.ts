@@ -80,6 +80,12 @@ export class ProfileService {
       throw error;
     }
   }
+
+  async updatePassword(identity: ProfileIdentity, password: string): Promise<void> {
+    requirePermission(identity, "/edit/profile");
+    if (password.length < 8) throw new Error("La clave debe tener al menos 8 caracteres.");
+    await this.keycloak.updatePassword(identity.sub, password);
+  }
 }
 
 function requirePermission(identity: ProfileIdentity, action: string): void {

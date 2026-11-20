@@ -20,6 +20,15 @@ export class ProfileController {
     }
   }
 
+  async updatePassword(identity: ProfileIdentity, password: string) {
+    try {
+      await this.service.updatePassword(identity, password);
+      return { status: 204, body: null };
+    } catch (error) {
+      return this.failure(error);
+    }
+  }
+
   private failure(error: unknown) {
     const message =
       error instanceof Error

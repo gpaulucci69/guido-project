@@ -9,6 +9,7 @@ export interface KeycloakProfileAdapter {
     sub: string,
     update: Omit<ProfileUpdate, "avatar"> & { avatar?: string },
   ): Promise<UserProfile>;
+  updatePassword(sub: string, password: string): Promise<void>;
 }
 
 export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {
@@ -130,5 +131,18 @@ export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {
       avatar: update.avatar ?? current.avatar,
       ...(current.email ? { email: current.email } : {}),
     };
+  }
+
+  async updatePassword(sub: string, password: string): Promise<void> {
+    const token = await this.adminToken();
+    const response = await fetch(
+      `${this.base}/admin/realms/${this.realm}/users/${encodeURIComponent(sub)}/reset-password`,
+      {
+      method: "PUT",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ type: "password", value: password, temporary: false }),
+      },
+    );
+    if (!response.ok) throw new Error("No se pudo actualizar la clave en Keycloak.");
   }
 }

@@ -14,6 +14,9 @@ export async function loadClientContext(): Promise<ClientContext | null> {
     const api = createApiClient({
       baseUrl:
         runtimeConfig.VITE_PROFILE_API_URL ??
+        (typeof import.meta.env?.VITE_PROFILE_API_URL === "string"
+          ? import.meta.env.VITE_PROFILE_API_URL
+          : undefined) ??
         (typeof window === "undefined"
           ? "http://localhost:3001/api/v1"
           : `${window.location.protocol}//${window.location.hostname}:3001/api/v1`),

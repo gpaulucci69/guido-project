@@ -42,6 +42,7 @@ function optionalEmail(value: unknown): string | undefined {
 }
 
 export function validateCreate(input: ClientCreate): ClientCreate {
+  validateType(input.type);
   if (input.type === "INDIVIDUAL") {
     return {
       type: input.type,
@@ -60,7 +61,7 @@ export function validateCreate(input: ClientCreate): ClientCreate {
     taxAddress: optionalText(input.taxAddress, "El domicilio fiscal"),
   };
   const representativeName = optionalText(input.legalRepresentativeName, "El representante legal");
-  const representativeTaxId = input.legalRepresentativeTaxId === undefined ? undefined : normalizeCuit(input.legalRepresentativeTaxId);
+  const representativeTaxId = input.legalRepresentativeTaxId ? normalizeCuit(input.legalRepresentativeTaxId) : undefined;
   if (Boolean(representativeName) !== Boolean(representativeTaxId)) throw new Error("El representante legal y su CUIT deben completarse juntos.");
   return { type: input.type, legalName: requiredText(input.legalName, "La razón social"), tradeName: optionalText(input.tradeName, "El nombre comercial"), legalRepresentativeName: representativeName, legalRepresentativeTaxId: representativeTaxId, ...common };
 }
@@ -77,7 +78,7 @@ export function validateUpdate(input: ClientUpdate): ClientUpdate {
     phone: optionalText(input.phone, "El teléfono"),
     taxAddress: optionalText(input.taxAddress, "El domicilio fiscal"),
     legalRepresentativeName: optionalText(input.legalRepresentativeName, "El representante legal"),
-    legalRepresentativeTaxId: input.legalRepresentativeTaxId === undefined ? undefined : normalizeCuit(input.legalRepresentativeTaxId),
+    legalRepresentativeTaxId: input.legalRepresentativeTaxId ? normalizeCuit(input.legalRepresentativeTaxId) : undefined,
   };
 }
 

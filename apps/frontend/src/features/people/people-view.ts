@@ -33,16 +33,28 @@ export async function renderPeopleView(
   const title =
     options.type === "client"
       ? "Clientes del estudio"
-      : "Contadores del estudio";
+      : "Asociados";
   container.innerHTML = `<section class="people-view"><div class="toolbar"><div><span class="eyebrow">GESTIÓN</span><h2>${title}</h2></div>${canAction(options.permissions, `${options.type}/add`) ? `<button id="people-add">+ Nuevo ${options.type === "client" ? "cliente" : "contador"}</button>` : ""}</div><div id="people-table-state" class="panel"><p>Cargando...</p></div></section>`;
   const state = container.querySelector<HTMLElement>("#people-table-state");
   try {
     const people = await listPeople(options.type);
     const columns: ColumnDef<AdministrableIdentity>[] = [
+      ...(options.type === "user"
+        ? [{ accessorKey: "avatarUrl", header: "Avatar" } satisfies ColumnDef<AdministrableIdentity>]
+        : []),
       { accessorKey: "firstName", header: "Nombre" },
       { accessorKey: "lastName", header: "Apellido" },
       { accessorKey: "alias", header: "Alias" },
       { accessorKey: "email", header: "Email" },
+      ...(options.type === "user"
+        ? [{ accessorKey: "clientRole", header: "Rol" } satisfies ColumnDef<AdministrableIdentity>]
+        : []),
+      ...(options.type === "user"
+        ? [
+            { accessorKey: "startDate", header: "Ingreso" } satisfies ColumnDef<AdministrableIdentity>,
+            { accessorKey: "birthDate", header: "Nacimiento" } satisfies ColumnDef<AdministrableIdentity>,
+          ]
+        : []),
       {
         accessorKey: "enabled",
         header: "Estado",
@@ -76,12 +88,18 @@ export async function renderPeopleView(
                     .map((cell) => {
                       const value = cell.getValue();
                       const display =
-                        cell.column.id === "enabled"
+                        cell.column.id === "avatarUrl"
+                          ? row.original.avatarUrl
+                            ? `<img class="people-avatar" src="${escapeHtml(row.original.avatarUrl)}" alt="" />`
+                            : `<span class="people-avatar people-avatar-fallback" aria-label="Iniciales de ${escapeHtml(`${row.original.firstName} ${row.original.lastName}`)}">${escapeHtml(initials(row.original.firstName, row.original.lastName))}</span>`
+                        : cell.column.id === "startDate" || cell.column.id === "birthDate"
+                          ? formatDate(String(value ?? ""))
+                          : cell.column.id === "enabled"
                           ? value
                             ? "Activo"
                             : "Inactivo"
                           : String(value ?? "");
-                      return `<td>${escapeHtml(display)}</td>`;
+                      return `<td>${cell.column.id === "avatarUrl" ? display : escapeHtml(display)}</td>`;
                     })
                     .join(
                       "",
@@ -154,4 +172,14 @@ function escapeHtml(value: string): string {
         char
       ] ?? char,
   );
+}
+
+function formatDate(value: string): string {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+function initials(firstName: string, lastName: string): string {
+  return `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase() || "?";
 }

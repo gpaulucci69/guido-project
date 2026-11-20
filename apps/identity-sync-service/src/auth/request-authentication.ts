@@ -15,6 +15,7 @@ export async function authenticateHeaders(headers: IncomingHttpHeaders) {
   if (!authorization?.startsWith("Bearer ")) {
     logSecurityEvent({
       event: "invalid-credential",
+      authenticationStage: "bearer-header",
       traceId: "unknown",
       result: "denied",
     });
@@ -24,6 +25,7 @@ export async function authenticateHeaders(headers: IncomingHttpHeaders) {
   if (!token) {
     logSecurityEvent({
       event: "invalid-credential",
+      authenticationStage: "bearer-header",
       traceId: "unknown",
       result: "denied",
     });
@@ -31,6 +33,8 @@ export async function authenticateHeaders(headers: IncomingHttpHeaders) {
   }
 
   let identity;
+  let authenticationStage: "token-verification" | "tenant-resolution" =
+    "token-verification";
   try {
     const claims = await verifyAccessToken(token, {
       issuer:
@@ -40,6 +44,7 @@ export async function authenticateHeaders(headers: IncomingHttpHeaders) {
         ? { jwksUri: process.env.OIDC_JWKS_URI }
         : {}),
     });
+    authenticationStage = "tenant-resolution";
     identity = await identityContextFromClaimsWithTenantLookup(
       claims,
       async (clientId) => (await tenantLookup.resolveByClientId(clientId)).id,
@@ -47,6 +52,7 @@ export async function authenticateHeaders(headers: IncomingHttpHeaders) {
   } catch {
     logSecurityEvent({
       event: "invalid-credential",
+      authenticationStage,
       traceId: "unknown",
       result: "denied",
     });

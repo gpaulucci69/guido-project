@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: saas_contable
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -15,7 +16,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ${DATA_ROOT:?Definir DATA_ROOT en .env}/postgres:/var/lib/postgresql/data
     networks:
       - saas-network
 
@@ -25,10 +26,11 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: keycloak_db
+      PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: keycloak_user
       POSTGRES_PASSWORD: keycloak_password
     volumes:
-      - keycloak_data:/var/lib/postgresql/data
+      - ${DATA_ROOT:?Definir DATA_ROOT en .env}/keycloak-db:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     healthcheck:
@@ -48,7 +50,7 @@ services:
       - "4222:4222"
       - "8222:8222"
     volumes:
-      - nats-data:/data
+      - ${DATA_ROOT:?Definir DATA_ROOT en .env}/nats:/data
     networks:
       - saas-network
 
@@ -59,13 +61,13 @@ services:
     user: "0:0"
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadminsecret
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?Definir MINIO_ACCESS_KEY en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?Definir MINIO_SECRET_KEY en .env}
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio-data:/data
+      - ${DATA_ROOT:?Definir DATA_ROOT en .env}/minio:/data
     networks:
       - saas-network
 
@@ -78,8 +80,8 @@ services:
       keycloak-db:
         condition: service_healthy
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Definir KEYCLOAK_ADMIN_USERNAME en .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Definir KEYCLOAK_ADMIN_PASSWORD en .env}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak_db
       KC_DB_USERNAME: keycloak_user
@@ -228,11 +230,11 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: "http://localhost:3000"
-      VITE_KEYCLOAK_URL: "http://localhost:8080"
-      VITE_KEYCLOAK_REALM: "saas-contable"
-      VITE_KEYCLOAK_CLIENT_ID: "guido"
-      VITE_PROFILE_API_URL: "http://localhost:3001/api/v1"
+      VITE_API_URL: ${VITE_BILLING_WORKFLOW_URL:?Definir VITE_BILLING_WORKFLOW_URL en .env}
+      VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:?Definir VITE_KEYCLOAK_URL en .env}
+      VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:?Definir VITE_KEYCLOAK_REALM en .env}
+      VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:?Definir VITE_KEYCLOAK_CLIENT_ID en .env}
+      VITE_PROFILE_API_URL: ${VITE_PROFILE_API_URL:?Definir VITE_PROFILE_API_URL en .env}
     volumes:
       - .:/workspace
       - frontend-node-modules:/workspace/node_modules
@@ -249,23 +251,23 @@ services:
       [
         "sh",
         "-c",
-        "npm ci && npx prisma generate --schema packages/database/prisma/schema.prisma && node_modules/.bin/vite-node apps/profile-service/src/main.ts",
+        "npm ci && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run start --workspace profile-service",
       ]
     environment:
-      PROFILE_PORT: "3001"
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/saas_contable?schema=public"
-      KEYCLOAK_URL: "http://keycloak_saas:8080"
-      OIDC_REALM: "saas-contable"
-      OIDC_ISSUER: "http://localhost:8080/realms/saas-contable"
+      PROFILE_PORT: ${PROFILE_PORT:?Definir PROFILE_PORT en .env}
+      DATABASE_URL: ${DATABASE_URL:?Definir PROFIDATABASE_URLLE_PORT en .env}
+      KEYCLOAK_URL: http://keycloak:8080
+      OIDC_REALM: ${VITE_KEYCLOAK_REALM:?Definir VITE_KEYCLOAK_REALM en .env}
+      OIDC_ISSUER: ${VITE_OIDC_ISSUER:?Definir VITE_OIDC_ISSUER en .env}
       OIDC_AUDIENCE: "account"
-      OIDC_JWKS_URI: "http://keycloak_saas:8080/realms/saas-contable/protocol/openid-connect/certs"
-      KEYCLOAK_ADMIN_USERNAME: "admin"
-      KEYCLOAK_ADMIN_PASSWORD: "admin"
-      MINIO_ENDPOINT: "http://minio:9000"
-      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
-      MINIO_ACCESS_KEY: "minioadmin"
-      MINIO_SECRET_KEY: "minioadminsecret"
-      MINIO_BUCKET: "saas-profile-avatars"
+      OIDC_JWKS_URI: ${VITE_OIDC_JWKS_URI:?Definir VITE_OIDC_JWKS_URI en .env}
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Definir KEYCLOAK_ADMIN_USERNAME en .env}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Definir KEYCLOAK_ADMIN_PASSWORD en .env}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:?Definir MINIO_ENDPOINT en .env}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?Definir MINIO_ACCESS_KEY en .env}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?Definir MINIO_SECRET_KEY en .env}
+      MINIO_BUCKET: ${MINIO_PROFILE_BUCKET:?Definir MINIO_PROFILE_BUCKET en .env}
     ports:
       - "3001:3001"
     volumes:
@@ -282,11 +284,7 @@ services:
       - saas-network
 
 volumes:
-  postgres-data:
-  nats-data:
-  minio-data:
   frontend-node-modules:
-  keycloak_data:
   profile-node-modules:
   accounting-client-node-modules:
 

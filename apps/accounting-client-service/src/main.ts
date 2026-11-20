@@ -6,6 +6,7 @@ import { authenticateHeaders } from "../../identity-sync-service/src/auth/reques
 import { hasPermission } from "../../identity-sync-service/src/auth/permission-evaluator.js";
 import type { ClientCreate, ClientStatus, ClientType, ClientUpdate } from "../../../packages/contracts/clients.js";
 import { validateCreate, validateType, validateUpdate } from "./clients/client.validation.js";
+import { Prisma, type AccountingClient } from "@prisma/client";
 
 function json(response: ServerResponse, status: number, value: unknown): void {
   response.writeHead(status, { "content-type": "application/json", "cache-control": "no-store", "access-control-allow-origin": "*", "access-control-allow-headers": "authorization,content-type" });
@@ -22,12 +23,12 @@ function requireAction(identity: Awaited<ReturnType<typeof authenticateHeaders>>
   if (!hasPermission(identity.permissions, "action", action)) throw new Error("No tiene permisos para realizar esta operación.");
 }
 
-function visibleName(client: { type: ClientType; firstName: string | null; lastName: string | null; legalName: string | null }): string {
+function visibleName(client: { type: ClientType; firstName?: string | null | undefined; lastName?: string | null | undefined; legalName?: string | null | undefined }): string {
   return client.type === "INDIVIDUAL" ? `${client.firstName ?? ""} ${client.lastName ?? ""}`.trim() : client.legalName ?? "";
 }
 
-function summary(client: { id: string; type: ClientType; firstName: string | null; lastName: string | null; legalName: string | null; cuit: string; email: string | null; status: string; updatedAt: Date }) {
-  return { id: client.id, type: client.type, displayName: visibleName(client), cuit: client.cuit, email: client.email, status: client.status as ClientStatus, updatedAt: client.updatedAt.toISOString() };
+function summary(client: AccountingClient) {
+  return { ...client, displayName: visibleName(client), status: client.status as ClientStatus, updatedAt: client.updatedAt.toISOString() };
 }
 
 const server = createServer(async (request, response) => {
@@ -67,19 +68,41 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "PATCH" && id) {
       requireAction(identity, "client/update");
-      const input = validateUpdate(await body(request) as ClientUpdate);
+      const validated = validateUpdate(await body(request) as ClientUpdate);
+      const input = Object.fromEntries(Object.entries(validated).filter(([, value]) => value !== undefined)) as ClientUpdate;
       const current = await prisma.accountingClient.findFirst({ where: { id, tenantId: identity.tenantId } });
       if (!current) throw new Error("Cliente no encontrado.");
       if (current.updatedAt.toISOString() !== input.updatedAt) throw new Error("El cliente fue modificado. Recargá la información e intentá nuevamente.");
-      const updated = await prisma.accountingClient.update({ where: { id }, data: { ...(input.firstName !== undefined ? { firstName: input.firstName } : {}), ...(input.lastName !== undefined ? { lastName: input.lastName } : {}), ...(input.legalName !== undefined ? { legalName: input.legalName } : {}), ...(input.tradeName !== undefined ? { tradeName: input.tradeName } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.phone !== undefined ? { phone: input.phone } : {}), ...(input.taxAddress !== undefined ? { taxAddress: input.taxAddress } : {}), ...(input.legalRepresentativeName !== undefined ? { legalRepresentativeName: input.legalRepresentativeName } : {}), ...(input.legalRepresentativeTaxId !== undefined ? { legalRepresentativeTaxId: input.legalRepresentativeTaxId } : {}) } });
-      json(response, 200, summary(updated));
+      const merged = { ...current, ...input };
+      validateCreate(Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== null)) as ClientCreate);
+      const updated = await prisma.accountingClient.updateMany({ where: { id, tenantId: identity.tenantId, updatedAt: current.updatedAt }, data: { businessName: visibleName({ ...current, ...input }), ...(input.firstName !== undefined ? { firstName: input.firstName } : {}), ...(input.lastName !== undefined ? { lastName: input.lastName } : {}), ...(input.legalName !== undefined ? { legalName: input.legalName } : {}), ...(input.tradeName !== undefined ? { tradeName: input.tradeName } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.phone !== undefined ? { phone: input.phone } : {}), ...(input.taxAddress !== undefined ? { taxAddress: input.taxAddress } : {}), ...(input.legalRepresentativeName !== undefined ? { legalRepresentativeName: input.legalRepresentativeName } : {}), ...(input.legalRepresentativeTaxId !== undefined ? { legalRepresentativeTaxId: input.legalRepresentativeTaxId } : {}) } });
+      if (updated.count !== 1) throw new Error("El cliente fue modificado. Recargá la información e intentá nuevamente.");
+      const client = await prisma.accountingClient.findFirstOrThrow({ where: { id, tenantId: identity.tenantId } });
+      json(response, 200, summary(client));
       return;
     }
     json(response, 404, { detail: "Ruta no encontrada." });
   } catch (error) {
-    const result = problemFromError(error);
+    const result = isDuplicateCuitError(error)
+      ? {
+          type: "https://httpstatuses.com/409",
+          title: "Cliente ya registrado",
+          status: 409,
+          detail:
+            "Ya existe un cliente con ese CUIT en este estudio. Verificá el CUIT o editá el cliente existente.",
+        }
+      : problemFromError(error);
     json(response, result.status, result);
   }
 });
+
+function isDuplicateCuitError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes("cuit")
+  );
+}
 
 server.listen(Number(process.env.PORT ?? 3002), "0.0.0.0", () => console.log("accounting-client-service listening"));

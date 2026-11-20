@@ -16,6 +16,8 @@ import {
   validateType,
 } from "./people.validation.js";
 import { KeycloakAdminAdapter } from "./keycloak-admin.adapter.js";
+import type { AvatarStorage } from "../profile/avatar-storage.adapter.js";
+import { avatarObjectKey, validateAvatar } from "../profile/profile.validation.js";
 
 export type PeopleIdentity = {
   sub: string;
@@ -27,6 +29,7 @@ export type PeopleIdentity = {
 export class PeopleService {
   constructor(
     private readonly keycloak = new KeycloakAdminAdapter(),
+    private readonly storage?: AvatarStorage,
     private readonly log: (
       event: string,
       context: Record<string, string>,
@@ -37,7 +40,16 @@ export class PeopleService {
     type: PeopleType,
   ): Promise<AdministrableIdentity[]> {
     requirePeopleRoute(identity.permissions, type);
-    return this.keycloak.list(validateType(type), identity.clientId);
+    const people = await this.keycloak.list(validateType(type), identity.clientId);
+    if (!this.storage) return people;
+    return Promise.all(people.map(async (person) => ({
+      ...person,
+      ...(person.avatar ? { avatarUrl: await this.storage!.signedUrl(person.avatar) } : {}),
+    })));
+  }
+  async clientRoles(identity: PeopleIdentity): Promise<string[]> {
+    requirePeopleRoute(identity.permissions, "user");
+    return this.keycloak.clientRoles(identity.clientId);
   }
   async create(
     identity: PeopleIdentity,
@@ -45,6 +57,11 @@ export class PeopleService {
   ): Promise<AdministrableIdentity> {
     const type = validateType(input.type);
     requirePeopleAction(identity.permissions, type, "add");
+    const clientRole = input.clientRole
+      ? validateOptionalText(input.clientRole, "El client role")
+      : undefined;
+    if (clientRole && !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole))
+      throw new Error("El client role no pertenece al cliente Keycloak activo.");
     const result = await this.keycloak.create({
       type,
       clientId: identity.clientId,
@@ -52,7 +69,9 @@ export class PeopleService {
       lastName: validateRequiredText(input.lastName, "El apellido"),
       alias: validateOptionalText(input.alias, "El alias"),
       email: validateEmail(input.email),
+      ...(clientRole !== undefined ? { clientRole } : {}),
     });
+    if (clientRole) await this.keycloak.assignClientRole(result.id, identity.clientId, clientRole);
     this.log("people-created", {
       tenant_id: identity.tenantId,
       userId: identity.sub,
@@ -74,6 +93,18 @@ export class PeopleService {
       current.clientId !== identity.clientId
     )
       throw new Error("La identidad no pertenece al cliente Keycloak activo.");
+    const clientRole = input.clientRole !== undefined
+      ? validateOptionalText(input.clientRole, "El client role")
+      : undefined;
+    if (clientRole && !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole))
+      throw new Error("El client role no pertenece al cliente Keycloak activo.");
+    let avatarKey: string | undefined;
+    if (input.avatar) {
+      if (!this.storage) throw new Error("El almacenamiento de avatares no está disponible.");
+      const validation = validateAvatar(input.avatar);
+      avatarKey = avatarObjectKey(identity.clientId, id, validation.extension);
+      await this.storage.put({ key: avatarKey, mimeType: input.avatar.mimeType, bytes: input.avatar.bytes });
+    }
     const result = await this.keycloak.update(id, {
       ...(input.firstName !== undefined
         ? { firstName: validateRequiredText(input.firstName, "El nombre") }
@@ -88,7 +119,10 @@ export class PeopleService {
         ? { email: validateEmail(input.email) }
         : {}),
       ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+      ...(clientRole !== undefined ? { clientRole } : {}),
+      ...(avatarKey ? { avatar: avatarKey } : {}),
     });
+    if (clientRole) await this.keycloak.assignClientRole(id, identity.clientId, clientRole);
     this.log("people-updated", {
       tenant_id: identity.tenantId,
       userId: identity.sub,

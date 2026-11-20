@@ -17,6 +17,10 @@ export class PeopleController {
       return this.failure(error);
     }
   }
+  async clientRoles(identity: PeopleIdentity) {
+    try { return { status: 200, body: { items: await this.service.clientRoles(identity) } }; }
+    catch (error) { return this.failure(error); }
+  }
   async create(identity: PeopleIdentity, input: PeopleCreate) {
     try {
       return { status: 201, body: await this.service.create(identity, input) };

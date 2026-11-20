@@ -11,6 +11,7 @@ export type HeaderOptions = {
   onResetPassword: () => void;
   /** Alias proveniente del token, usado si el adaptador de perfil aún no lo devuelve. */
   identityAlias?: string;
+  clientRoles?: readonly string[];
 };
 
 export async function renderAppHeader(
@@ -27,7 +28,11 @@ export async function renderAppHeader(
   const avatar = profile.avatarUrl
     ? `<img class="user-avatar" data-avatar-image src="${escapeAttribute(profile.avatarUrl)}" alt="" />`
     : `<span class="user-avatar user-initials" aria-hidden="true">${escapeHtml(initials(profile))}</span>`;
-  header.innerHTML = `<div class="account-tools"><span class="account-alias">${escapeHtml(label)}</span><button class="notification-button" type="button" aria-label="Notificaciones" title="Notificaciones">🔔</button><button id="avatar-button" class="avatar-button" type="button" aria-expanded="false" aria-controls="account-menu" aria-label="Abrir menú de ${escapeHtml(label)}">${avatar}</button><div id="account-menu" class="account-menu hidden" role="menu"><button type="button" data-account-action="edit" role="menuitem">Editar perfil</button><button type="button" data-account-action="password" role="menuitem">Reestablece tu clave</button><button type="button" data-account-action="logout" role="menuitem">Cerrar sesión</button></div></div>`;
+  const roles = (options.clientRoles ?? []).filter((role) => role.trim());
+  const rolesMarkup = roles.length
+    ? `<div class="account-roles" role="group" aria-label="Roles del cliente"><span class="account-roles-title">Roles</span>${roles.map((role) => `<span class="account-role">${escapeHtml(role)}</span>`).join("")}</div>`
+    : "";
+  header.innerHTML = `<div class="account-tools"><span class="account-alias">${escapeHtml(label)}</span><button class="notification-button" type="button" aria-label="Notificaciones" title="Notificaciones">🔔</button><button id="avatar-button" class="avatar-button" type="button" aria-expanded="false" aria-controls="account-menu" aria-label="Abrir menú de ${escapeHtml(label)}">${avatar}</button><div id="account-menu" class="account-menu hidden" role="menu">${rolesMarkup}<button type="button" data-account-action="edit" role="menuitem">Editar perfil</button><button type="button" data-account-action="password" role="menuitem">Reestablece tu clave</button><button type="button" data-account-action="logout" role="menuitem">Cerrar sesión</button></div></div>`;
   header
     .querySelector<HTMLImageElement>("[data-avatar-image]")
     ?.addEventListener("error", (event) => {
