@@ -33,6 +33,7 @@ import type {
 } from "../../../packages/contracts/profile.js";
 import type {
   PeopleCreate,
+  PeopleGroup,
   PeopleType,
   PeopleUpdate,
 } from "../../../packages/contracts/people.js";
@@ -157,10 +158,15 @@ export class ProfileHttpController {
     @Body() input: { password?: unknown; confirmation?: unknown },
   ) {
     if (typeof input.password !== "string" || input.password.length < 8)
-      throw new BadRequestException("La clave debe tener al menos 8 caracteres.");
+      throw new BadRequestException(
+        "La clave debe tener al menos 8 caracteres.",
+      );
     if (input.password !== input.confirmation)
       throw new BadRequestException("Las claves no coinciden.");
-    send(response, await this.profile.updatePassword(request.identity, input.password));
+    send(
+      response,
+      await this.profile.updatePassword(request.identity, input.password),
+    );
   }
 
   @Get("client-context")
@@ -188,16 +194,31 @@ export class ProfileHttpController {
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
     @Query("type") type?: PeopleType,
+    @Query("group") group?: unknown,
   ) {
     send(
       response,
-      await this.people.list(request.identity, this.requiredType(type)),
+      await this.people.list(
+        request.identity,
+        this.requiredType(type),
+        this.optionalPeopleGroup(group),
+      ),
     );
   }
 
   @Get("people/client-roles")
-  async listClientRoles(@Req() request: AuthenticatedRequest, @Res() response: Response) {
-    send(response, await this.people.clientRoles(request.identity));
+  async listClientRoles(
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+    @Query("group") group?: unknown,
+  ) {
+    send(
+      response,
+      await this.people.clientRoles(
+        request.identity,
+        this.optionalPeopleGroup(group),
+      ),
+    );
   }
 
   @Post("people")
@@ -210,23 +231,44 @@ export class ProfileHttpController {
   }
 
   @Patch("people/:id")
-  @UseInterceptors(FileInterceptor("avatar", { limits: { fileSize: maxAvatarBytes + 1 } }))
+  @UseInterceptors(
+    FileInterceptor("avatar", { limits: { fileSize: maxAvatarBytes + 1 } }),
+  )
   async updatePerson(
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
     @Param("id") id: string,
-    @Body() input: PeopleUpdate,
+    @Body()
+    input: Omit<PeopleUpdate, "enabled"> & { enabled?: boolean | string },
     @UploadedFile() avatar?: AvatarFile,
     @Query("type") type?: PeopleType,
   ) {
+    const { enabled, ...fields } = input ?? {};
+    if (
+      enabled !== undefined &&
+      enabled !== true &&
+      enabled !== false &&
+      enabled !== "true" &&
+      enabled !== "false"
+    )
+      throw new BadRequestException("El estado del asociado no es válido.");
     send(
       response,
-      await this.people.update(
-        request.identity,
-        id,
-        this.requiredType(type),
-        { ...input, ...(avatar ? { avatar: { filename: avatar.originalname, mimeType: avatar.mimetype, bytes: avatar.buffer } } : {}) },
-      ),
+      await this.people.update(request.identity, id, this.requiredType(type), {
+        ...fields,
+        ...(enabled === undefined
+          ? {}
+          : { enabled: enabled === true || enabled === "true" }),
+        ...(avatar
+          ? {
+              avatar: {
+                filename: avatar.originalname,
+                mimeType: avatar.mimetype,
+                bytes: avatar.buffer,
+              },
+            }
+          : {}),
+      }),
     );
   }
 
@@ -247,6 +289,12 @@ export class ProfileHttpController {
     if (!type)
       throw new BadRequestException("Faltan parámetros de la operación.");
     return type;
+  }
+
+  private optionalPeopleGroup(group: unknown): PeopleGroup | undefined {
+    if (group === undefined || group === "associates" || group === "users")
+      return group;
+    throw new BadRequestException("El grupo de usuarios no es válido.");
   }
 
   private async sendProfile(response: Response, result: HttpResult) {

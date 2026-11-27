@@ -27,7 +27,7 @@ body {
 }
 
 /* =========================================================
-   3. Encabezado: Logo y Nombre del Cliente
+   3. Encabezado: Logo (llenando el círculo) y Nombre del Cliente
    ========================================================= */
 .header-container {
   text-align: center;
@@ -35,13 +35,27 @@ body {
 }
 
 .logo-wrapper {
-  margin-bottom: 14px;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 14px auto;
+  border-radius: 50%;
+  background-color: #0f172a;
+  border: 2px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0; /* Sin padding para evitar que se vea el borde cuadrado de la imagen */
+  box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .client-logo {
-  max-width: 180px;
-  max-height: 70px;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Recorta la imagen en forma circular perfecta */
+  border-radius: 50%;
+  display: block;
 }
 
 .client-title {
@@ -87,9 +101,22 @@ body {
 }
 
 /* =========================================================
-   5. Formulario: etiquetas, inputs y botones
+   5. Formulario: ocultar etiquetas, limpiar wrappers PatternFly y botón
    ========================================================= */
-.card-dark label {
+.card-dark label[for="username"],
+.card-dark label[for="password"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.card-dark label:not([for="username"]):not([for="password"]) {
   color: #94a3b8 !important;
   font-size: 13px !important;
   font-weight: 500 !important;
@@ -97,14 +124,38 @@ body {
   display: inline-block;
 }
 
-/* Inputs estándar */
+/* Eliminar el fondo y borde blanco que PatternFly 5 agrega a .pf-v5-c-form-control */
+.card-dark .pf-v5-c-form-control,
+.card-dark .pf-c-form-control {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+.card-dark .pf-v5-c-form-control::before,
+.card-dark .pf-v5-c-form-control::after,
+.card-dark .pf-c-form-control::before,
+.card-dark .pf-c-form-control::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+}
+
+/* Inputs estándar y placeholders */
 .card-dark input[type="text"],
+.card-dark input[type="email"],
 .card-dark input[type="password"] {
   background-color: #0f172a !important;
   border: 1px solid #334155 !important;
   color: #f8fafc !important;
   border-radius: 6px !important;
   padding: 10px 14px !important;
+  height: 42px !important;
   width: 100% !important;
   box-sizing: border-box !important;
   font-size: 14px !important;
@@ -112,30 +163,59 @@ body {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.card-dark input::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
 .card-dark input[type="text"]:focus,
+.card-dark input[type="email"]:focus,
 .card-dark input[type="password"]:focus {
   border-color: #38bdf8 !important;
   box-shadow: 0 0 0 1px #38bdf8 !important;
 }
 
-/* Botón principal de login */
+/* Contenedor del botón submit de Keycloak centrado en el cuadro */
+.card-dark #kc-form-buttons,
+.card-dark .pf-v5-c-form__actions,
+.card-dark .pf-c-form__actions {
+  width: 100% !important;
+  margin-top: 0px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Botón principal de login reducido y centrado */
+.card-dark #kc-login,
 .card-dark input[type="submit"],
-.card-dark button[type="submit"] {
+.card-dark button[type="submit"],
+.card-dark button.pf-v5-c-button.pf-m-primary,
+.card-dark button.pf-c-button.pf-m-primary {
   background-color: #2563eb !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: 6px !important;
-  padding: 11px !important;
+  padding: 9px 28px !important;
+  height: 38px !important;
+  width: auto !important;
+  min-width: 170px !important;
+  max-width: 220px !important;
   font-weight: 600 !important;
-  font-size: 14px !important;
-  width: 100% !important;
+  font-size: 13.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   cursor: pointer !important;
-  transition: background-color 0.2s;
-  margin-top: 10px;
+  transition: background-color 0.2s, transform 0.1s !important;
+  margin: 0 auto !important;
 }
 
+.card-dark #kc-login:hover,
 .card-dark input[type="submit"]:hover,
-.card-dark button[type="submit"]:hover {
+.card-dark button[type="submit"]:hover,
+.card-dark button.pf-v5-c-button.pf-m-primary:hover {
   background-color: #1d4ed8 !important;
 }
 
@@ -151,12 +231,13 @@ body {
 }
 
 /* =========================================================
-   6. Ojo al lado del input y flotando sobre el fondo (Sin caja)
+   6. Iconos (Email y Ojo): Estilo profesional unificado
    ========================================================= */
 
-/* Fila horizontal: campo a la izquierda, ojo al lado a la derecha */
+/* Fila horizontal idéntica para Email y Contraseña */
 .pf-v5-c-input-group,
-.pf-c-input-group {
+.pf-c-input-group,
+.custom-input-group {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -165,55 +246,79 @@ body {
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* El input ocupa todo el espacio disponible */
-.pf-v5-c-input-group > input,
-.pf-c-input-group > input,
 .pf-v5-c-input-group__item:first-child,
 .pf-c-input-group__item:first-child {
   flex: 1 1 auto !important;
-  border-radius: 6px !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* El contenedor del botón en PatternFly no añade bordes ni fondos */
+/* Contenedor interno de PatternFly para el botón del ojo */
 .pf-v5-c-input-group__item:has(button),
 .pf-c-input-group__item:has(button),
-.pf-v5-c-input-group__item,
-.pf-c-input-group__item {
+.pf-v5-c-input-group__item:last-child,
+.pf-c-input-group__item:last-child {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 30px !important;
 }
 
-/* El botón del ojo: completamente invisible de contenedor */
-.card-dark button.pf-v5-c-button,
-.card-dark button.pf-c-button,
+/* Caja fija idéntica (30x30px) para ambos íconos */
 .card-dark button[aria-label*="password"],
 .card-dark button[aria-label*="contraseña"],
-.card-dark button[data-password-toggle] {
+.card-dark button[data-password-toggle],
+.card-dark .input-side-icon {
   position: static !important;
   transform: none !important;
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
+  border-radius: 6px !important;
   outline: none !important;
   box-shadow: none !important;
-  padding: 4px !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  padding: 0 !important;
   margin: 0 !important;
-  cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 0 0 auto !important;
+  flex: 0 0 30px !important;
+  color: #64748b !important; /* Slate 500 unificado */
+  transition: color 0.2s ease, background-color 0.2s ease !important;
 }
 
-/* Anular pseudoelementos de PatternFly que dibujan bordes artificiales */
-.card-dark button.pf-v5-c-button::before,
-.card-dark button.pf-v5-c-button::after,
-.card-dark button.pf-c-button::before,
-.card-dark button.pf-c-button::after,
+.card-dark button[aria-label*="password"],
+.card-dark button[aria-label*="contraseña"],
+.card-dark button[data-password-toggle] {
+  cursor: pointer !important;
+}
+
+.card-dark .input-side-icon {
+  cursor: default !important;
+}
+
+/* Anular pseudoelementos de PatternFly */
+.card-dark button[aria-label*="password"]::before,
+.card-dark button[aria-label*="password"]::after,
+.card-dark button[aria-label*="contraseña"]::before,
+.card-dark button[aria-label*="contraseña"]::after,
 .pf-v5-c-input-group::before,
 .pf-v5-c-input-group::after,
 .pf-c-input-group::before,
@@ -223,40 +328,34 @@ body {
   border: none !important;
 }
 
-/* Icono SVG y trazos internos: flotando directamente sobre la tarjeta */
-.card-dark button svg,
-.card-dark button svg path,
-.card-dark button svg g,
-.card-dark button i {
-  fill: #64748b !important;
-  stroke: #64748b !important;
-  color: #64748b !important;
-  width: 18px !important;
-  height: 18px !important;
+/* Ambos SVGs comparten exactamente el mismo tamaño, trazo y color heredado */
+.card-dark button[aria-label*="password"] svg,
+.card-dark button[aria-label*="contraseña"] svg,
+.card-dark button[data-password-toggle] svg,
+.card-dark .input-side-icon svg {
+  width: 19px !important;
+  height: 19px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
   pointer-events: none !important;
-  transition: fill 0.2s ease, stroke 0.2s ease, opacity 0.2s ease !important;
-  opacity: 0.8;
+  opacity: 0.9 !important;
+  transition: opacity 0.2s ease !important;
 }
 
-/* Hover: ilumina solo el icono al pasar el mouse */
-.card-dark button:hover {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.card-dark button:hover svg,
-.card-dark button:hover svg path,
-.card-dark button:hover svg g,
-.card-dark button:hover i {
-  fill: #38bdf8 !important;
-  stroke: #38bdf8 !important;
+/* Hover sutil profesional para el botón del ojo */
+.card-dark button[aria-label*="password"]:hover,
+.card-dark button[aria-label*="contraseña"]:hover,
+.card-dark button[data-password-toggle]:hover {
   color: #38bdf8 !important;
-  opacity: 1 !important;
+  background-color: rgba(56, 189, 248, 0.08) !important;
 }
 
-.card-dark button:active {
-  background: transparent !important;
-  background-color: transparent !important;
+/* Iluminación sincronizada cuando el input activo tiene el foco */
+.custom-input-group:focus-within .input-side-icon,
+.pf-v5-c-input-group:focus-within button[aria-label*="password"],
+.pf-v5-c-input-group:focus-within button[aria-label*="contraseña"],
+.pf-c-input-group:focus-within button[aria-label*="password"],
+.pf-c-input-group:focus-within button[aria-label*="contraseña"] {
+  color: #38bdf8 !important;
 }

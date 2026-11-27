@@ -1,6 +1,7 @@
 import type {
   AdministrableIdentity,
   PeopleCreate,
+  PeopleGroup,
   PeopleType,
   PeopleUpdate,
 } from "../../../../../packages/contracts/people.js";
@@ -8,25 +9,26 @@ import { accessToken } from "../../auth/session";
 import { createApiClient } from "../../lib/api/client";
 
 const api = createApiClient({
-  baseUrl:
-    (typeof import.meta.env?.VITE_PROFILE_API_URL === "string"
-      ? import.meta.env.VITE_PROFILE_API_URL
-      : undefined) ??
-    `${window.location.protocol}//${window.location.hostname}:3001/api/v1`,
+  baseUrl: `${window.location.protocol}//${window.location.hostname}:3001/api/v1`,
   getToken: accessToken,
 });
 
 export function peopleRoute(type: PeopleType): string {
   return type === "client" ? "/home/client/list" : "/home/users/list";
 }
-export function listClientRoles(): Promise<{ items: string[] }> {
-  return api<{ items: string[] }>("/people/client-roles");
+export function listClientRoles(
+  group: PeopleGroup,
+): Promise<{ items: string[] }> {
+  return api<{ items: string[] }>(`/people/client-roles?group=${group}`);
 }
 
 export async function listPeople(
   type: PeopleType,
+  group?: PeopleGroup,
 ): Promise<AdministrableIdentity[]> {
-  return (await api<{ items: AdministrableIdentity[] }>(`/people?type=${type}`))
+  const params = new URLSearchParams({ type });
+  if (group) params.set("group", group);
+  return (await api<{ items: AdministrableIdentity[] }>(`/people?${params}`))
     .items;
 }
 
@@ -42,19 +44,22 @@ export async function createPerson(
 export async function updatePerson(
   id: string,
   type: PeopleType,
-  input: PeopleUpdate,
+  input: Omit<PeopleUpdate, "avatar"> & { avatar?: File },
 ): Promise<AdministrableIdentity> {
-  const avatar = input.avatar as unknown as File;
-  if (avatar instanceof File) {
+  const { avatar, ...fields } = input;
+  if (avatar) {
     const body = new FormData();
-    for (const [key, value] of Object.entries(input))
-      if (key !== "avatar" && value !== undefined) body.set(key, String(value));
+    for (const [key, value] of Object.entries(fields))
+      if (value !== undefined) body.set(key, String(value));
     body.set("avatar", avatar);
-    return api<AdministrableIdentity>(`/people/${encodeURIComponent(id)}?type=${type}`, { method: "PATCH", body });
+    return api<AdministrableIdentity>(
+      `/people/${encodeURIComponent(id)}?type=${type}`,
+      { method: "PATCH", body },
+    );
   }
   return api<AdministrableIdentity>(
     `/people/${encodeURIComponent(id)}?type=${type}`,
-    { method: "PATCH", body: JSON.stringify(input) },
+    { method: "PATCH", body: JSON.stringify(fields) },
   );
 }
 

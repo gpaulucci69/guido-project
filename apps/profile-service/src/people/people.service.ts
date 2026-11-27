@@ -1,8 +1,10 @@
-import type {
-  AdministrableIdentity,
-  PeopleCreate,
-  PeopleType,
-  PeopleUpdate,
+import {
+  belongsToPeopleGroup,
+  type AdministrableIdentity,
+  type PeopleCreate,
+  type PeopleGroup,
+  type PeopleType,
+  type PeopleUpdate,
 } from "../../../../packages/contracts/people.js";
 import {
   requirePeopleAction,
@@ -17,7 +19,10 @@ import {
 } from "./people.validation.js";
 import { KeycloakAdminAdapter } from "./keycloak-admin.adapter.js";
 import type { AvatarStorage } from "../profile/avatar-storage.adapter.js";
-import { avatarObjectKey, validateAvatar } from "../profile/profile.validation.js";
+import {
+  avatarObjectKey,
+  validateAvatar,
+} from "../profile/profile.validation.js";
 
 export type PeopleIdentity = {
   sub: string;
@@ -38,17 +43,45 @@ export class PeopleService {
   async list(
     identity: PeopleIdentity,
     type: PeopleType,
+    group?: PeopleGroup,
   ): Promise<AdministrableIdentity[]> {
-    requirePeopleRoute(identity.permissions, type);
-    const people = await this.keycloak.list(validateType(type), identity.clientId);
-    if (!this.storage) return people;
-    return Promise.all(people.map(async (person) => ({
-      ...person,
-      ...(person.avatar ? { avatarUrl: await this.storage!.signedUrl(person.avatar) } : {}),
-    })));
+    if (group && type !== "user")
+      throw new Error("El grupo se aplica al listado de usuarios.");
+    requirePeopleRoute(identity.permissions, type, group);
+    const identities = await this.keycloak.list(
+      validateType(type),
+      identity.clientId,
+    );
+    const people = group
+      ? identities.filter((person) => belongsToPeopleGroup(person, group))
+      : identities;
+    const storage = this.storage;
+    const lastLogins =
+      group === "users"
+        ? await this.keycloak.lastSuccessfulLogins(
+            people.map(({ id }) => id),
+            identity.clientId,
+          )
+        : undefined;
+    if (!storage && !lastLogins) return people;
+    return Promise.all(
+      people.map(async (person) => {
+        const lastLoginAt = lastLogins?.get(person.id);
+        return {
+          ...person,
+          ...(lastLoginAt ? { lastLoginAt } : {}),
+          ...(storage && person.avatar
+            ? { avatarUrl: await storage.signedUrl(person.avatar) }
+            : {}),
+        };
+      }),
+    );
   }
-  async clientRoles(identity: PeopleIdentity): Promise<string[]> {
-    requirePeopleRoute(identity.permissions, "user");
+  async clientRoles(
+    identity: PeopleIdentity,
+    group?: PeopleGroup,
+  ): Promise<string[]> {
+    requirePeopleRoute(identity.permissions, "user", group);
     return this.keycloak.clientRoles(identity.clientId);
   }
   async create(
@@ -60,8 +93,13 @@ export class PeopleService {
     const clientRole = input.clientRole
       ? validateOptionalText(input.clientRole, "El client role")
       : undefined;
-    if (clientRole && !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole))
-      throw new Error("El client role no pertenece al cliente Keycloak activo.");
+    if (
+      clientRole &&
+      !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole)
+    )
+      throw new Error(
+        "El client role no pertenece al cliente Keycloak activo.",
+      );
     const result = await this.keycloak.create({
       type,
       clientId: identity.clientId,
@@ -70,8 +108,29 @@ export class PeopleService {
       alias: validateOptionalText(input.alias, "El alias"),
       email: validateEmail(input.email),
       ...(clientRole !== undefined ? { clientRole } : {}),
+      ...(input.startDate !== undefined
+        ? {
+            startDate: validateOptionalText(
+              input.startDate,
+              "La fecha de ingreso",
+            ),
+          }
+        : {}),
+      ...(input.birthDate !== undefined
+        ? {
+            birthDate: validateOptionalText(
+              input.birthDate,
+              "La fecha de nacimiento",
+            ),
+          }
+        : {}),
     });
-    if (clientRole) await this.keycloak.assignClientRole(result.id, identity.clientId, clientRole);
+    if (clientRole)
+      await this.keycloak.assignClientRole(
+        result.id,
+        identity.clientId,
+        clientRole,
+      );
     this.log("people-created", {
       tenant_id: identity.tenantId,
       userId: identity.sub,
@@ -93,17 +152,28 @@ export class PeopleService {
       current.clientId !== identity.clientId
     )
       throw new Error("La identidad no pertenece al cliente Keycloak activo.");
-    const clientRole = input.clientRole !== undefined
-      ? validateOptionalText(input.clientRole, "El client role")
-      : undefined;
-    if (clientRole && !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole))
-      throw new Error("El client role no pertenece al cliente Keycloak activo.");
+    const clientRole =
+      input.clientRole !== undefined
+        ? validateOptionalText(input.clientRole, "El client role")
+        : undefined;
+    if (
+      clientRole &&
+      !(await this.keycloak.clientRoles(identity.clientId)).includes(clientRole)
+    )
+      throw new Error(
+        "El client role no pertenece al cliente Keycloak activo.",
+      );
     let avatarKey: string | undefined;
     if (input.avatar) {
-      if (!this.storage) throw new Error("El almacenamiento de avatares no está disponible.");
+      if (!this.storage)
+        throw new Error("El almacenamiento de avatares no está disponible.");
       const validation = validateAvatar(input.avatar);
       avatarKey = avatarObjectKey(identity.clientId, id, validation.extension);
-      await this.storage.put({ key: avatarKey, mimeType: input.avatar.mimeType, bytes: input.avatar.bytes });
+      await this.storage.put({
+        key: avatarKey,
+        mimeType: input.avatar.mimeType,
+        bytes: input.avatar.bytes,
+      });
     }
     const result = await this.keycloak.update(id, {
       ...(input.firstName !== undefined
@@ -120,9 +190,26 @@ export class PeopleService {
         : {}),
       ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
       ...(clientRole !== undefined ? { clientRole } : {}),
+      ...(input.startDate !== undefined
+        ? {
+            startDate: validateOptionalText(
+              input.startDate,
+              "La fecha de ingreso",
+            ),
+          }
+        : {}),
+      ...(input.birthDate !== undefined
+        ? {
+            birthDate: validateOptionalText(
+              input.birthDate,
+              "La fecha de nacimiento",
+            ),
+          }
+        : {}),
       ...(avatarKey ? { avatar: avatarKey } : {}),
     });
-    if (clientRole) await this.keycloak.assignClientRole(id, identity.clientId, clientRole);
+    if (clientRole)
+      await this.keycloak.assignClientRole(id, identity.clientId, clientRole);
     this.log("people-updated", {
       tenant_id: identity.tenantId,
       userId: identity.sub,

@@ -19,6 +19,7 @@ export type FrontendIdentity = {
   tenantId: string;
   firstName: string;
   lastName: string;
+  email?: string;
   alias: string;
   avatar: string | null;
   permissions: readonly FrontendPermission[];
@@ -117,6 +118,7 @@ export function identityFromUser(user: User): FrontendIdentity {
     firstName: typeof profile.given_name === "string" ? profile.given_name : "",
     lastName:
       typeof profile.family_name === "string" ? profile.family_name : "",
+    ...(typeof profile.email === "string" ? { email: profile.email } : {}),
     alias: typeof profile.alias === "string" ? profile.alias.trim() : "",
     avatar:
       typeof profile.avatar === "string" && profile.avatar.trim()

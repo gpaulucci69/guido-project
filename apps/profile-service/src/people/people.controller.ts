@@ -1,5 +1,6 @@
 import type {
   PeopleCreate,
+  PeopleGroup,
   PeopleType,
   PeopleUpdate,
 } from "../../../../packages/contracts/people.js";
@@ -7,19 +8,25 @@ import type { PeopleIdentity, PeopleService } from "./people.service.js";
 
 export class PeopleController {
   constructor(private readonly service: PeopleService) {}
-  async list(identity: PeopleIdentity, type: PeopleType) {
+  async list(identity: PeopleIdentity, type: PeopleType, group?: PeopleGroup) {
     try {
       return {
         status: 200,
-        body: { items: await this.service.list(identity, type) },
+        body: { items: await this.service.list(identity, type, group) },
       };
     } catch (error) {
       return this.failure(error);
     }
   }
-  async clientRoles(identity: PeopleIdentity) {
-    try { return { status: 200, body: { items: await this.service.clientRoles(identity) } }; }
-    catch (error) { return this.failure(error); }
+  async clientRoles(identity: PeopleIdentity, group?: PeopleGroup) {
+    try {
+      return {
+        status: 200,
+        body: { items: await this.service.clientRoles(identity, group) },
+      };
+    } catch (error) {
+      return this.failure(error);
+    }
   }
   async create(identity: PeopleIdentity, input: PeopleCreate) {
     try {

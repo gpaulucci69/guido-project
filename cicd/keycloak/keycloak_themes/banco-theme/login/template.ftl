@@ -62,10 +62,61 @@
 
   </div>
 
-<#-- Script de conmutación de contraseña corregido y robusto -->
+<#-- Script de UI (placeholders, íconos unificados y toggle de contraseña) -->
   <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function () {
-      // 1. Forzar type="button" en todos los botones que no sean el submit principal
+      const SVG_MAIL =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<rect x="2" y="4" width="20" height="16" rx="3"></rect>' +
+          '<path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>' +
+        '</svg>';
+
+      const SVG_EYE_OPEN =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>' +
+          '<circle cx="12" cy="12" r="3"></circle>' +
+        '</svg>';
+
+      // 1. Configurar placeholder y envolver campo de Email con su ícono unificado
+      const userInput = document.getElementById("username");
+      const userLabel = document.querySelector('label[for="username"]');
+
+      if (userInput) {
+        const emailText = userLabel ? userLabel.textContent.trim() : "Email";
+        userInput.setAttribute("placeholder", emailText || "Email");
+
+        const pfWrapper = userInput.closest(".pf-v5-c-form-control, .pf-c-form-control") || userInput;
+
+        if (!pfWrapper.parentElement.classList.contains("custom-input-group")) {
+          const rowGroup = document.createElement("div");
+          rowGroup.className = "custom-input-group";
+          pfWrapper.parentNode.insertBefore(rowGroup, pfWrapper);
+          rowGroup.appendChild(pfWrapper);
+
+          const iconSpan = document.createElement("span");
+          iconSpan.className = "input-side-icon";
+          iconSpan.setAttribute("aria-hidden", "true");
+          iconSpan.innerHTML = SVG_MAIL;
+          rowGroup.appendChild(iconSpan);
+        }
+      }
+
+      // 2. Configurar placeholder y reemplazar el ícono del ojo por el SVG unificado
+      const passInput = document.getElementById("password");
+      const passLabel = document.querySelector('label[for="password"]');
+      if (passInput) {
+        const passText = passLabel ? passLabel.textContent.trim() : "Contraseña";
+        passInput.setAttribute("placeholder", passText || "Contraseña");
+      }
+
+      const eyeBtn = document.querySelector(
+        'button[aria-label*="password"], button[aria-label*="contraseña"], button[data-password-toggle]'
+      );
+      if (eyeBtn) {
+        eyeBtn.innerHTML = SVG_EYE_OPEN;
+      }
+
+      // 3. Forzar type="button" en todos los botones que no sean el submit principal
       const allButtons = document.querySelectorAll("form button");
       allButtons.forEach(function (btn) {
         if (btn.id !== "kc-login" && btn.type !== "submit" && btn.name !== "login") {
@@ -74,17 +125,15 @@
       });
     });
 
-    // 2. Listener en fase de captura para conmutar la visibilidad
+    // 4. Listener en fase de captura para conmutar visibilidad e ícono (abierto/tachado)
     document.addEventListener("click", function (event) {
       const btn = event.target.closest("button");
       if (!btn) return;
 
-      // Ignorar si es el botón de enviar credenciales
       if (btn.id === "kc-login" || btn.type === "submit" || btn.name === "login") {
         return;
       }
 
-      // Identificar si el botón pulsado es el del ojo
       const isEyeButton =
         btn.hasAttribute("data-password-toggle") ||
         (btn.getAttribute("aria-label") && /password|contrase|clave/i.test(btn.getAttribute("aria-label"))) ||
@@ -92,11 +141,23 @@
 
       if (!isEyeButton) return;
 
-      // Detener eventos que puedan disparar submits involuntarios
       event.preventDefault();
       event.stopPropagation();
 
-      // Localizar el campo de contraseña por ID o name
+      const SVG_EYE_OPEN =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>' +
+          '<circle cx="12" cy="12" r="3"></circle>' +
+        '</svg>';
+
+      const SVG_EYE_OFF =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>' +
+          '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>' +
+          '<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>' +
+          '<line x1="2" y1="2" x2="22" y2="22"></line>' +
+        '</svg>';
+
       const form = btn.closest("form") || document;
       const passInput = form.querySelector('input#password') ||
                         form.querySelector('input[name="password"]') ||
@@ -107,6 +168,7 @@
         const targetType = isCurrentlyPassword ? "text" : "password";
 
         passInput.setAttribute("type", targetType);
+        btn.innerHTML = isCurrentlyPassword ? SVG_EYE_OFF : SVG_EYE_OPEN;
         btn.setAttribute("aria-label", isCurrentlyPassword ? "Ocultar contraseña" : "Ver contraseña");
       }
     }, true);

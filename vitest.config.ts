@@ -2,6 +2,17 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    globals: true,
+    include: [
+      "apps/**/*.test.ts",
+      "apps/**/*.test.tsx",
+      "apps/**/*.spec.ts",
+      "packages/**/*.test.ts",
+      "packages/**/*.spec.ts",
+      "tests/**/*.test.ts",
+      "tests/**/*.spec.ts",
+    ],
+    exclude: ["apps/keycloak-auth/**/*.spec.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "html"],

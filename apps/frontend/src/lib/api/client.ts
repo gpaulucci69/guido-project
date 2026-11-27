@@ -33,11 +33,34 @@ export function createApiClient(options: ApiClientOptions) {
       ...init,
       headers,
     });
-    if (response.ok) {
-      if (response.status === 204) return undefined as T;
-      return (await response.json()) as T;
+    if (response.status === 204) return undefined as T;
+    const text = await response.text();
+    let payload: unknown;
+    try {
+      payload = text.trim() ? JSON.parse(text) : undefined;
+    } catch {
+      throw new ApiError({
+        type: "about:blank",
+        title: "Error de API",
+        status: response.status,
+        detail: "La respuesta del servidor no tiene un formato válido.",
+      });
     }
-    const problem = (await response.json()) as ProblemDetails;
-    throw new ApiError(problem);
+    if (response.ok) return payload as T;
+    const body =
+      payload && typeof payload === "object"
+        ? (payload as Record<string, unknown>)
+        : {};
+    const detail = [body.detail, body.message, body.error].find(
+      (value): value is string =>
+        typeof value === "string" && Boolean(value.trim()),
+    );
+    throw new ApiError({
+      ...body,
+      type: typeof body.type === "string" ? body.type : "about:blank",
+      title: typeof body.title === "string" ? body.title : "Error de API",
+      status: response.status,
+      detail: detail ?? "La solicitud no pudo completarse.",
+    });
   };
 }

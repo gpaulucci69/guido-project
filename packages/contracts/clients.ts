@@ -1,3 +1,5 @@
+export const clientsPath = "/home/client/list";
+
 export type ClientType = "INDIVIDUAL" | "LEGAL_ENTITY";
 export type ClientStatus = "ACTIVE" | "INACTIVE";
 

@@ -15,6 +15,7 @@ body {
   padding: 48px 24px;
 }
 .app-layout {
+  --app-header-height: 47px;
   min-height: 100vh;
   display: flex;
   background: #f4f7fb;
@@ -25,7 +26,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 26px 16px 18px;
+  padding: 0 16px 18px;
   background: linear-gradient(180deg, #17243b 0%, #111b2e 100%);
   color: white;
   transition:
@@ -40,9 +41,9 @@ body {
 .menu-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 42px;
-  padding: 0 8px;
+  gap: 8px;
+  min-height: var(--app-header-height);
+  padding: 0 4px;
 }
 .brand-mark {
   display: grid;
@@ -71,8 +72,13 @@ body {
   display: block;
 }
 .menu-brand strong {
-  font-size: 16px;
+  font-size: 13px;
+  line-height: 1.15;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.menu-brand .menu-label {
+  min-width: 0;
 }
 .menu-brand small {
   margin-top: 2px;
@@ -98,10 +104,28 @@ body {
   text-align: left;
 }
 .menu-toggle {
-  justify-content: flex-start;
-  padding: 10px 12px;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin-inline-start: auto;
   color: #aebbd1;
-  font-size: 12px;
+}
+.menu-toggle:hover,
+.menu-toggle:focus-visible {
+  color: white;
+  background: #ffffff12;
+}
+.menu-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.side-menu.collapsed .menu-toggle {
+  flex-basis: 38px;
+  width: 38px;
+  height: 38px;
+  margin-inline-start: 0;
 }
 .menu-link {
   min-height: 48px;
@@ -144,7 +168,6 @@ body {
 .side-menu.collapsed .menu-label {
   display: none;
 }
-.side-menu.collapsed .menu-toggle,
 .side-menu.collapsed .menu-link {
   justify-content: center;
   padding-left: 0;
@@ -169,8 +192,9 @@ body {
 }
 .content-area > .header {
   max-width: none;
+  min-height: var(--app-header-height);
   margin: 0;
-  padding: 0px 36px;
+  padding: 5px 36px;
   justify-content: flex-end;
   background: white;
   border-bottom: 1px solid #e5eaf2;
@@ -212,8 +236,13 @@ body {
 }
 .notification-button {
   font-size: 1.25rem;
+  line-height: 1;
+  cursor: default;
 }
 .avatar-button {
+  flex: none;
+  overflow: hidden;
+  padding: 0;
   border-radius: 50%;
 }
 .user-avatar {
@@ -229,6 +258,9 @@ body {
 }
 .user-initials {
   font-size: 14px;
+}
+.user-avatar-photo {
+  background: transparent;
 }
 .session-expired-backdrop {
   position: fixed;
@@ -259,7 +291,10 @@ body {
   top: 54px;
   z-index: 5;
   min-width: 190px;
+  max-width: min(280px, calc(100vw - 32px));
   padding: 8px;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
   background: white;
   border: 1px solid #e5eaf2;
   border-radius: 12px;
@@ -281,14 +316,18 @@ body {
 }
 .account-role {
   color: #17202a;
-  font-size: 0.88rem;
+}
+.account-menu .eyebrow {
+  font-size: 0.6875rem;
 }
 .account-menu button {
   display: block;
   width: 100%;
+  font-size: 11px;
   text-align: left;
   color: #17202a;
   background: transparent;
+  padding:8px 16px;
 }
 .account-menu button:hover,
 .account-menu button:focus {
@@ -312,6 +351,58 @@ body {
   background: white;
   border-radius: 18px;
   box-shadow: 0 20px 60px #17202a55;
+}
+dialog.modal {
+  position: fixed;
+  border: 0;
+  max-width: calc(100% - 2rem);
+}
+dialog.modal::backdrop {
+  background: #17202a88;
+}
+.modal-actions {
+  flex-wrap: wrap;
+}
+.modal-actions .secondary {
+  margin-left: 0;
+}
+.user-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 700px) {
+  #react-app .app-layout {
+    flex-direction: column;
+  }
+  #react-app .side-menu {
+    position: static;
+    width: 100%;
+    flex-basis: auto;
+    min-height: auto;
+    height: auto;
+  }
+  #react-app .content-area {
+    width: 100%;
+  }
+  .side-menu.collapsed {
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+  .side-menu.collapsed .menu-brand {
+    justify-content: flex-start;
+    padding-inline: 4px;
+  }
+  .side-menu.collapsed .menu-links {
+    display: flex;
+    gap: 4px;
+  }
+  .side-menu.collapsed .menu-link {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+  }
 }
 .modal-close {
   position: absolute;
@@ -476,11 +567,8 @@ button {
 .people-actions {
   white-space: nowrap;
 }
-.people-actions .link + .link {
+.people-actions .icon-action + .icon-action {
   margin-left: 6px;
-}
-.people-actions .danger {
-  color: #c64545;
 }
 .people-actions .icon-action {
   display: inline-grid;
@@ -494,7 +582,7 @@ button {
   background: transparent;
   vertical-align: middle;
 }
-.people-actions .icon-action:hover {
+.people-actions .icon-action:not(:disabled):hover {
   background: #eef2ff;
   border-color: #dbe2ff;
 }
@@ -505,6 +593,10 @@ button {
 }
 .people-actions .icon-action.danger {
   color: #c64545;
+}
+.people-actions .icon-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .people-actions .icon-action svg {
   width: 20px;
@@ -518,6 +610,81 @@ button {
 .people-view .panel {
   margin-top: 18px;
   padding: 18px 20px;
+}
+.list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-top: 16px;
+}
+.list-filters label {
+  min-width: 180px;
+  flex: 1;
+}
+.list-filters input,
+.list-filters select {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 5px;
+  padding: 7px 10px;
+  border: 1px solid #dce2eb;
+  border-radius: 8px;
+  background: #fff;
+}
+.ui-state {
+  margin: 20px 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+}
+.ui-state-loading {
+  color: #526071;
+  background: #f5f7fb;
+}
+.ui-state-empty {
+  color: #526071;
+  background: #f8fafc;
+}
+.ui-state-error {
+  color: #a43838;
+  background: #fff1f1;
+  border: 1px solid #f0caca;
+}
+.account-menu-identity,
+.account-menu-roles {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #e5eaf2;
+}
+.account-menu-identity span {
+  color: #526071;
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.metrics-grid article {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  background: #fbfcff;
+}
+.metrics-grid strong {
+  font-size: 1.15rem;
+}
+@media (max-width: 700px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .list-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 table {
   width: 100%;
@@ -597,40 +764,71 @@ input {
   border-radius: 9px;
   font: inherit;
 }
-.status-field {
+.modal-select-field {
   position: relative;
+  align-self: start;
+  min-width: 0;
+  color: #344054;
+  font-weight: 650;
 }
-.status-select {
+.modal-select-field::after {
+  position: absolute;
+  inset-inline-end: 16px;
+  bottom: 20px;
+  width: 8px;
+  height: 8px;
+  border: solid #526071;
+  border-width: 0 2px 2px 0;
+  content: "";
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+.modal-select-field select {
   display: block;
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
   margin-top: 7px;
-  padding: 11px 40px 11px 12px;
+  padding-block: 10px;
+  padding-inline: 12px 36px;
   border: 1px solid #cbd5e1;
   border-radius: 9px;
   color: #17202a;
   background-color: #fff;
   font: inherit;
+  font-weight: 500;
+  appearance: none;
   cursor: pointer;
   transition:
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
     background-color 0.18s ease;
 }
-.status-select:hover {
-  border-color: #8d9cf0;
+.modal-select-field select:not(:disabled):hover {
+  border-color: #8593b8;
+  background-color: #f8faff;
 }
-.status-select:focus-visible {
-  outline: 3px solid #5271ff44;
+.modal-select-field select:focus-visible {
+  outline: 2px solid #5271ff;
   outline-offset: 2px;
   border-color: #5271ff;
 }
-.status-select:disabled {
+.modal-select-field select:disabled {
   cursor: not-allowed;
-  color: #7b8594;
+  color: #526071;
   background: #f1f4f8;
   border-color: #dce2eb;
   opacity: 1;
+}
+@media (forced-colors: active) {
+  .modal-select-field::after {
+    display: none;
+  }
+  .modal-select-field select {
+    appearance: auto;
+    padding-inline-end: 12px;
+  }
+  .modal-select-field select:focus-visible {
+    outline-color: Highlight;
+  }
 }
 form div {
   grid-column: 1 / -1;
@@ -659,14 +857,13 @@ form div {
   .side-menu:not(.collapsed) .menu-label {
     display: block;
   }
-  .side-menu:not(.collapsed) .menu-toggle,
   .side-menu:not(.collapsed) .menu-link {
     justify-content: flex-start;
     padding-left: 12px;
     padding-right: 12px;
   }
   .content-area > .header {
-    padding: 20px;
+    padding-inline: 20px;
   }
   .content-area > #page-content {
     padding: 28px 20px 40px;

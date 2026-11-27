@@ -22,7 +22,7 @@ model Tenant {
 }
 
 model AccountingClient {
-  id                         String @id @default(uuid()) @db.Uuid
+  id                         String @id(map: "accounting_clients_pkey") @default(uuid()) @db.Uuid
   tenantId                   String @db.Uuid
   representativeAccountantId String? @db.Uuid
   businessName               String @db.VarChar(200)
@@ -39,8 +39,8 @@ model AccountingClient {
   legalRepresentativeName    String? @db.VarChar(200)
   legalRepresentativeTaxId   String? @db.VarChar(11)
   updatedAt                  DateTime @updatedAt
-  tenant                     Tenant @relation(fields: [tenantId], references: [id])
-  @@index([tenantId])
-  @@unique([tenantId, cuit])
-  @@map("accounting_clients")
+  tenant                     Tenant @relation(fields: [tenantId], references: [id], map: "accounting_clients_tenantId_fkey")
+  @@index([tenantId], map: "accounting_clients_tenantId_idx")
+  @@unique([tenantId, cuit], map: "accounting_clients_tenantId_cuit_key")
+  @@map("clients")
 }

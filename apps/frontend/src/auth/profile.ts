@@ -28,9 +28,6 @@ const runtimeConfig =
   ).__APP_CONFIG__ ?? {};
 const profileBaseUrl =
   runtimeConfig.VITE_PROFILE_API_URL ??
-  (typeof import.meta.env?.VITE_PROFILE_API_URL === "string"
-    ? import.meta.env.VITE_PROFILE_API_URL
-    : undefined) ??
   `${window.location.protocol}//${window.location.hostname}:3001/api/v1`;
 const api = createApiClient({
   baseUrl: profileBaseUrl,

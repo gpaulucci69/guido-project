@@ -1,9 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { isHealthPath, healthResponse } from "../../../packages/observability/src/health-controller.js";
-import { problemFromError } from "../../../packages/http/src/problem-details.js";
+import { forbiddenProblem, problemFromError } from "../../../packages/http/src/problem-details.js";
 import { prisma } from "../../../packages/database/src/prisma-client.js";
 import { authenticateHeaders } from "../../identity-sync-service/src/auth/request-authentication.js";
-import { hasPermission } from "../../identity-sync-service/src/auth/permission-evaluator.js";
+import { ClientPermissionError, requireClientPermission } from "./clients/client.authorization.js";
 import type { ClientCreate, ClientStatus, ClientType, ClientUpdate } from "../../../packages/contracts/clients.js";
 import { validateCreate, validateType, validateUpdate } from "./clients/client.validation.js";
 import { Prisma, type AccountingClient } from "@prisma/client";
@@ -17,10 +17,6 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   let raw = "";
   for await (const chunk of request) raw += chunk;
   return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-}
-
-function requireAction(identity: Awaited<ReturnType<typeof authenticateHeaders>>, action: string): void {
-  if (!hasPermission(identity.permissions, "action", action)) throw new Error("No tiene permisos para realizar esta operación.");
 }
 
 function visibleName(client: { type: ClientType; firstName?: string | null | undefined; lastName?: string | null | undefined; legalName?: string | null | undefined }): string {
@@ -37,7 +33,7 @@ const server = createServer(async (request, response) => {
   if (!request.url?.startsWith("/api/v1/clients")) { json(response, 404, { detail: "Ruta no encontrada." }); return; }
   try {
     const identity = await authenticateHeaders(request.headers);
-    if (!hasPermission(identity.permissions, "route", "/home/customers")) throw new Error("No tiene permisos para consultar esta pantalla.");
+    requireClientPermission(identity, "view");
     const parsed = new URL(request.url, "http://localhost");
     const parts = parsed.pathname.split("/").filter(Boolean);
     const id = parts[3];
@@ -49,14 +45,14 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (request.method === "POST" && !id) {
-      requireAction(identity, "client/add");
+      requireClientPermission(identity, "add");
       const input = validateCreate(await body(request) as ClientCreate);
       const created = await prisma.accountingClient.create({ data: { tenantId: identity.tenantId, businessName: input.type === "INDIVIDUAL" ? `${input.firstName} ${input.lastName}` : input.legalName, cuit: input.cuit, email: input.email ?? "", phone: input.phone ?? null, type: input.type, firstName: input.type === "INDIVIDUAL" ? input.firstName : null, lastName: input.type === "INDIVIDUAL" ? input.lastName : null, legalName: input.type === "LEGAL_ENTITY" ? input.legalName : null, tradeName: input.type === "LEGAL_ENTITY" ? input.tradeName ?? null : null, taxAddress: input.taxAddress ?? null, legalRepresentativeName: input.type === "LEGAL_ENTITY" ? input.legalRepresentativeName ?? null : null, legalRepresentativeTaxId: input.type === "LEGAL_ENTITY" ? input.legalRepresentativeTaxId ?? null : null } });
       json(response, 201, summary(created));
       return;
     }
     if (request.method === "PATCH" && id && parts[4] === "status") {
-      requireAction(identity, "client/status");
+      requireClientPermission(identity, "status");
       const input = await body(request);
       const status = input.status === "ACTIVE" || input.status === "INACTIVE" ? input.status : undefined;
       if (!status) throw new Error("El estado del cliente no es válido.");
@@ -67,7 +63,7 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (request.method === "PATCH" && id) {
-      requireAction(identity, "client/update");
+      requireClientPermission(identity, "update");
       const validated = validateUpdate(await body(request) as ClientUpdate);
       const input = Object.fromEntries(Object.entries(validated).filter(([, value]) => value !== undefined)) as ClientUpdate;
       const current = await prisma.accountingClient.findFirst({ where: { id, tenantId: identity.tenantId } });
@@ -83,6 +79,10 @@ const server = createServer(async (request, response) => {
     }
     json(response, 404, { detail: "Ruta no encontrada." });
   } catch (error) {
+    if (error instanceof ClientPermissionError) {
+      json(response, 403, forbiddenProblem());
+      return;
+    }
     const result = isDuplicateCuitError(error)
       ? {
           type: "https://httpstatuses.com/409",

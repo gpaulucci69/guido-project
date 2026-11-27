@@ -1,8 +1,15 @@
-import type { PeopleType } from "../../../../packages/contracts/people.js";
+import {
+  associatesPermission,
+  usersPermission,
+  type PeopleGroup,
+  type PeopleType,
+} from "../../../../packages/contracts/people.js";
 
 type Permission = { type: "route" | "action"; value: string };
-const routeFor = (type: PeopleType) =>
-  type === "client" ? "/home/client/list" : "/home/users/list";
+const routeFor = (type: PeopleType, group?: PeopleGroup) => {
+  if (type === "client") return "/home/client/list";
+  return group === "associates" ? associatesPermission : usersPermission;
+};
 const actionFor = (
   type: PeopleType,
   action: "add" | "edit" | "update" | "delete",
@@ -23,8 +30,9 @@ function has(
 export function requirePeopleRoute(
   permissions: readonly Permission[],
   type: PeopleType,
+  group?: PeopleGroup,
 ): void {
-  if (!has(permissions, "route", routeFor(type)))
+  if (!has(permissions, "route", routeFor(type, group)))
     throw new Error("No tiene permisos para consultar esta pantalla.");
 }
 

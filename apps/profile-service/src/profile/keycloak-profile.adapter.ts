@@ -9,7 +9,7 @@ export interface KeycloakProfileAdapter {
     sub: string,
     update: Omit<ProfileUpdate, "avatar"> & { avatar?: string },
   ): Promise<UserProfile>;
-  updatePassword(sub: string, password: string): Promise<void>;
+  updatePassword?(sub: string, password: string): Promise<void>;
 }
 
 export class HttpKeycloakProfileAdapter implements KeycloakProfileAdapter {

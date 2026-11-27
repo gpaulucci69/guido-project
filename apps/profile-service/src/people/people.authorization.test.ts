@@ -31,4 +31,15 @@ describe("autorización de personas", () => {
       requirePeopleUpdate(permissions(["/client/edit"]), "client"),
     ).toThrow();
   });
+  it("exige el permiso específico para cada listado de usuarios", () => {
+    const associates = permissions(["/home/contributors/list"]);
+    const users = permissions(["/home/users/list"]);
+    expect(() =>
+      requirePeopleRoute(associates, "user", "associates"),
+    ).not.toThrow();
+    expect(() => requirePeopleRoute(users, "user", "associates")).toThrow();
+    expect(() => requirePeopleRoute(users, "user", "users")).not.toThrow();
+    expect(() => requirePeopleRoute(associates, "user", "users")).toThrow();
+    expect(() => requirePeopleRoute(associates, "user")).toThrow();
+  });
 });

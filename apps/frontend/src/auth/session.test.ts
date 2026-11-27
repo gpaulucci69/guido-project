@@ -3,10 +3,11 @@ import { identityFromUser } from "./session";
 import { TokenManager } from "../lib/auth/token-manager";
 
 describe("frontend session identity", () => {
-  it("maps Keycloak authorization claims to the frontend identity", () => {
+  it("maps Keycloak profile and authorization claims to the frontend identity", () => {
     const identity = identityFromUser({
       profile: {
         sub: "user-1",
+        email: "usuario@example.com",
         authorization: {
           client_id: "guido",
           routes: ["home/welcome"],
@@ -18,6 +19,7 @@ describe("frontend session identity", () => {
 
     expect(identity).toMatchObject({
       sub: "user-1",
+      email: "usuario@example.com",
       tenantId: "guido",
       roles: ["SUPER_ADMIN"],
     });

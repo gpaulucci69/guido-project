@@ -8,16 +8,16 @@ export type ObligationRow = {
   dueDate: string;
 };
 export function toObligationRow(value: ObligationRow) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendiente",
+    OVERDUE: "Vencida",
+    PARTIALLY_PAID: "Pagada parcialmente",
+    PAID: "Pagada",
+    CANCELLED: "Cancelada",
+  };
   return {
     ...value,
     balanceLabel: formatARS(value.balanceDue),
-    statusLabel:
-      value.status === "PENDING"
-        ? "Pendiente"
-        : value.status === "PAID"
-          ? "Pagada"
-          : value.status === "CANCELLED"
-            ? "Cancelada"
-            : value.status,
+    statusLabel: labels[value.status] ?? value.status,
   };
 }
